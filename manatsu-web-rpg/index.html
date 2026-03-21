@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>810 SURVIVOR</title>
+  <meta name="description" content="HTML5 + JavaScript 810 SURVIVOR. Mouse, touch, and keyboard supported.">
+  <meta name="theme-color" content="#1b120d">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>810 SURVIVOR</h1>
+        <p>Mouse / touch / keyboard ready. In-game language toggle included.</p>
+      </div>
+      <div class="app-badge">AUTO ATTACK / MOUSE CURSOR / SMARTPHONE READY</div>
+    </header>
+
+    <section class="game-frame">
+      <canvas id="gameCanvas" width="960" height="720" aria-label="810 SURVIVOR game canvas"></canvas>
+    </section>
+
+    <footer class="app-footer">
+      <p>Move with mouse cursor, touch drag, WASD, or arrow keys. `X` retries. `C` pauses.</p>
+    </footer>
+  </main>
+
+  <noscript>JavaScript is required to play 810 SURVIVOR.</noscript>
+
+  <script src="./src/data/survivorSpawnTables.js"></script>
+  <script src="./src/data/survivorContent.js"></script>
+  <script src="./src/data/survivorMeta.js"></script>
+  <script src="./src/data/survivorSkins.js"></script>
+  <script src="./src/core/constants.js"></script>
+  <script src="./src/data/localization.js"></script>
+  <script src="./src/core/input.js"></script>
+  <script src="./src/core/state.js"></script>
+  <script src="./src/systems/audio.js"></script>
+  <script src="./src/systems/save.js"></script>
+  <script src="./src/systems/survivorSpawner.js"></script>
+  <script src="./src/systems/survivorEffects.js"></script>
+  <script src="./src/render/renderer.js"></script>
+  <script src="./src/scenes/titleScene.js"></script>
+  <script src="./src/scenes/codexScene.js"></script>
+  <script src="./src/scenes/recipeScene.js"></script>
+  <script src="./src/scenes/survivorScene.js"></script>
+  <script src="./src/core/sceneManager.js"></script>
+  <script src="./src/core/game.js"></script>
+  <script src="./src/main.js"></script>
+</body>
+</html>
