@@ -1654,12 +1654,39 @@
 
     vacuumXpPickups() {
       var totalXp = 0;
+      var collected = [];
+      var sampleStep = 1;
+      var samples = 0;
       var i;
       for (i = this.pickups.length - 1; i >= 0; i -= 1) {
         if (this.pickups[i].kind === "xp") {
           totalXp += this.pickups[i].xp || 0;
-          this.effects.spawnPickupTrail(this.pickups[i].x, this.pickups[i].y, this.player.x, this.player.y, this.pickups[i].color);
+          collected.push({
+            x: this.pickups[i].x,
+            y: this.pickups[i].y,
+            color: this.pickups[i].color
+          });
           this.pickups.splice(i, 1);
+        }
+      }
+      if (collected.length > 0) {
+        sampleStep = Math.max(1, Math.ceil(collected.length / 18));
+        for (i = 0; i < collected.length; i += sampleStep) {
+          this.effects.spawnPickupTrail(collected[i].x, collected[i].y, this.player.x, this.player.y, collected[i].color);
+          samples += 1;
+          if (samples >= 18) {
+            break;
+          }
+        }
+        if (collected.length > 18) {
+          this.effects.spawnRing(this.player.x, this.player.y, {
+            color: "#7fe6ff",
+            radius: 18,
+            growth: 150,
+            lineWidth: 4,
+            life: 0.22,
+            fillAlpha: 0.04
+          });
         }
       }
       if (totalXp > 0) {

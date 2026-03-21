@@ -12,6 +12,7 @@
       this.state = ns.SaveSystem.load();
       this.sceneManager = new ns.SceneManager(this);
       this.lastTimestamp = 0;
+      this.runtimeError = null;
     }
 
     getLocale() {
@@ -183,16 +184,42 @@
       dt = Math.min(dt, 0.05);
       this.lastTimestamp = timestamp;
 
-      if (this.input.wasPressed("confirm") || this.input.wasPressed("menu") || this.input.wasPointerPressed()) {
-        this.audio.unlock();
+      try {
+        if (this.input.wasPressed("confirm") || this.input.wasPressed("menu") || this.input.wasPointerPressed()) {
+          this.audio.unlock();
+        }
+
+        this.state.totalPlayTime += dt;
+        this.audio.update(dt);
+        this.sceneManager.update(dt, this.input);
+        this.sceneManager.draw(this.renderer);
+        this.runtimeError = null;
+      } catch (error) {
+        this.runtimeError = error;
+        console.error(error);
+        this.renderer.clear("#120c08");
+        this.renderer.drawPanel(70, 120, 820, 420, {
+          fill: "rgba(12, 8, 6, 0.96)",
+          border: "#ff8a70"
+        });
+        this.renderer.drawText("RUNTIME ERROR", 104, 152, {
+          size: 36,
+          color: "#ff8a70",
+          shadow: true
+        });
+        this.renderer.drawParagraph(String(error && error.message ? error.message : error), 104, 214, 752, {
+          size: 22,
+          lineHeight: 30,
+          color: "#f4f0da"
+        });
+        this.renderer.drawParagraph("Reload the page with Ctrl + F5. If this keeps happening, send this screen.", 104, 360, 752, {
+          size: 18,
+          lineHeight: 26,
+          color: "#d8c8a4"
+        });
       }
 
-      this.state.totalPlayTime += dt;
-      this.audio.update(dt);
-      this.sceneManager.update(dt, this.input);
-      this.sceneManager.draw(this.renderer);
       this.input.clearFrameState();
-
       window.requestAnimationFrame((next) => this.loop(next));
     }
 

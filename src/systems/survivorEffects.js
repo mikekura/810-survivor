@@ -1,10 +1,22 @@
 (function (ns) {
+  var MAX_PARTICLES = 420;
+  var MAX_RINGS = 80;
+  var MAX_TEXTS = 48;
+  var MAX_FLASHES = 8;
+
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
 
   function randomRange(min, max) {
     return min + Math.random() * (max - min);
+  }
+
+  function pushCapped(list, item, max) {
+    if (list.length >= max) {
+      list.shift();
+    }
+    list.push(item);
   }
 
   ns.SurvivorEffects = class {
@@ -52,7 +64,7 @@
       for (i = 0; i < count; i += 1) {
         var angle = randomRange(0, Math.PI * 2);
         var speed = randomRange(opts.speedMin || 30, opts.speedMax || 120);
-        this.particles.push({
+        pushCapped(this.particles, {
           x: x,
           y: y,
           vx: Math.cos(angle) * speed,
@@ -66,13 +78,13 @@
           screenSpace: !!opts.screenSpace,
           gravity: opts.gravity || 0,
           drag: opts.drag || 0.94
-        });
+        }, MAX_PARTICLES);
       }
     }
 
     spawnRing(x, y, options) {
       var opts = options || {};
-      this.rings.push({
+      pushCapped(this.rings, {
         x: x,
         y: y,
         radius: opts.radius || 8,
@@ -83,12 +95,12 @@
         color: opts.color || "#ffffff",
         fillAlpha: opts.fillAlpha || 0,
         screenSpace: !!opts.screenSpace
-      });
+      }, MAX_RINGS);
     }
 
     spawnFloatingText(text, x, y, options) {
       var opts = options || {};
-      this.texts.push({
+      pushCapped(this.texts, {
         text: text,
         x: x,
         y: y,
@@ -99,16 +111,16 @@
         color: opts.color || "#f4f0da",
         size: opts.size || 18,
         screenSpace: !!opts.screenSpace
-      });
+      }, MAX_TEXTS);
     }
 
     flashScreen(color, alpha, duration) {
-      this.flashes.push({
+      pushCapped(this.flashes, {
         color: color || "#ffffff",
         alpha: typeof alpha === "number" ? alpha : 0.14,
         life: duration || 0.18,
         maxLife: duration || 0.18
-      });
+      }, MAX_FLASHES);
     }
 
     spawnHit(x, y, options) {
@@ -215,7 +227,7 @@
       var i;
       for (i = 0; i < 6; i += 1) {
         var t = i / 5;
-        this.particles.push({
+        pushCapped(this.particles, {
           x: fromX + (toX - fromX) * t,
           y: fromY + (toY - fromY) * t,
           vx: randomRange(-8, 8),
@@ -228,7 +240,7 @@
           shape: "diamond",
           gravity: 0,
           drag: 0.9
-        });
+        }, MAX_PARTICLES);
       }
     }
 
