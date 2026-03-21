@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512" shape-rendering="crispEdges" role="img" aria-labelledby="title desc">
+  <title id="title">Original senpai standing portrait</title>
+  <desc id="desc">A large pixel-art standing portrait with cropped dark hair, broad shoulders, a thick neck, tan skin, and a navy shirt.</desc>
+  <rect width="256" height="512" fill="#111117"/>
+  <rect x="0" y="0" width="74" height="512" fill="#b9d0cb"/>
+  <rect x="74" y="0" width="182" height="512" fill="#ece5dd"/>
+  <rect x="10" y="26" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="54" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="82" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="110" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="138" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="166" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="194" width="54" height="4" fill="#6f8f89"/>
+  <rect x="10" y="222" width="54" height="4" fill="#6f8f89"/>
+
+  <rect x="128" y="412" width="92" height="42" fill="#a6a09a" opacity="0.34"/>
+
+  <rect x="86" y="44" width="96" height="92" fill="#b77c5e"/>
+  <rect x="80" y="54" width="10" height="58" fill="#171212"/>
+  <rect x="178" y="54" width="10" height="58" fill="#171212"/>
+  <rect x="90" y="30" width="88" height="16" fill="#171212"/>
+  <rect x="98" y="24" width="72" height="8" fill="#171212"/>
+  <rect x="104" y="20" width="56" height="6" fill="#171212"/>
+  <rect x="88" y="44" width="92" height="12" fill="#1b1716"/>
+
+  <rect x="100" y="84" width="24" height="8" fill="#271b18"/>
+  <rect x="138" y="84" width="24" height="8" fill="#271b18"/>
+  <rect x="108" y="90" width="5" height="4" fill="#f6f0eb"/>
+  <rect x="146" y="90" width="5" height="4" fill="#f6f0eb"/>
+  <rect x="124" y="94" width="10" height="22" fill="#8a5d49"/>
+  <rect x="114" y="122" width="40" height="6" fill="#71473b"/>
+  <rect x="120" y="130" width="28" height="4" fill="#7c5144"/>
+
+  <rect x="106" y="136" width="56" height="28" fill="#b77c5e"/>
+  <rect x="74" y="156" width="120" height="154" fill="#2b3552"/>
+  <rect x="58" y="176" width="16" height="110" fill="#b77c5e"/>
+  <rect x="194" y="176" width="16" height="110" fill="#b77c5e"/>
+  <rect x="84" y="168" width="100" height="18" fill="#354062"/>
+  <rect x="88" y="196" width="92" height="10" fill="#46547c"/>
+  <rect x="112" y="160" width="44" height="10" fill="#d8cbc0"/>
+
+  <rect x="80" y="310" width="110" height="58" fill="#1b2335"/>
+  <rect x="90" y="368" width="30" height="82" fill="#b77c5e"/>
+  <rect x="146" y="368" width="30" height="82" fill="#b77c5e"/>
+  <rect x="88" y="450" width="36" height="18" fill="#12161f"/>
+  <rect x="144" y="450" width="36" height="18" fill="#12161f"/>
+
+  <rect x="0" y="0" width="256" height="512" fill="none" stroke="#f6c453" stroke-width="4"/>
+</svg>
