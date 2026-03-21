@@ -1853,8 +1853,29 @@
       return result;
     }
 
+    resolveExcessLevelUps() {
+      var bonusCount = Math.max(1, this.pendingLevelUps || 1);
+      var coinReward = bonusCount * (12 + this.hazardRank);
+      this.pendingLevelUps = 0;
+      this.levelUpChoices = null;
+      this.pointerCapturedByUi = false;
+      this.awardCoins(coinReward, this.player.x, this.player.y - 10);
+      this.healPlayer(8 + bonusCount * 2);
+      this.pushMessage(
+        this.game.getLocale() === "ja"
+          ? "強化最大: コイン補填 +" + coinReward
+          : "MAX BUILD: +" + coinReward + " coins",
+        1.3,
+        "#f6c453"
+      );
+    }
+
     openLevelUpChoices() {
       this.levelUpChoices = this.buildLevelUpChoices();
+      if (!this.levelUpChoices.length) {
+        this.resolveExcessLevelUps();
+        return;
+      }
       this.levelUpSelected = 0;
       this.levelUpHover = -1;
       this.pointerCapturedByUi = true;
@@ -1893,6 +1914,11 @@
       var cardX = ns.constants.GAME_WIDTH - LEVELUP_CARD_WIDTH - 74;
       var cardY = 164;
       var i;
+
+      if (!this.levelUpChoices || !this.levelUpChoices.length) {
+        this.resolveExcessLevelUps();
+        return;
+      }
       this.levelUpHover = -1;
 
       if (pointer.inside) {
