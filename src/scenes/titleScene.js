@@ -152,10 +152,12 @@
       var selectedSkinId = game.getSelectedSurvivorSkinId ? game.getSelectedSurvivorSkinId() : "";
       var i;
       this.game = game;
+      this.options = opts;
       this.titlePulse = 0;
       this.selectedIndex = 0;
       this.stageIndex = findStageIndex(opts.stageId || "stationFront");
       this.rank = clamp(typeof opts.hazardRank === "number" ? opts.hazardRank : 0, 0, unlockedRank);
+      this.modeIndex = opts.mode === "infinity" ? 1 : 0;
       this.hoverIndex = -1;
       this.skins = skins;
       this.skinIndex = 0;
@@ -173,16 +175,17 @@
     }
 
     getButtons() {
-      var unlockedRank = this.getUnlockedRank();
       var skinCount = Math.max(1, this.skins.length);
       return [
-        { type: "start", label: this.game.t("buttons.startRun"), x: 106, y: 438, width: 360, height: 70 },
-        { type: "stage", label: this.game.stageName(STAGES[this.stageIndex].id), x: 106, y: 522, width: 172, height: 54 },
-        { type: "rank", label: String(this.rank) + " / " + String(unlockedRank), x: 290, y: 522, width: 94, height: 54 },
-        { type: "language", label: this.game.getLocale().toUpperCase(), x: 396, y: 522, width: 70, height: 54 },
-        { type: "skin", label: String(this.skinIndex + 1) + " / " + String(skinCount), x: 106, y: 590, width: 112, height: 54 },
-        { type: "codex", label: this.game.t("buttons.codex"), x: 230, y: 590, width: 112, height: 54 },
-        { type: "recipes", label: this.game.t("buttons.recipes"), x: 354, y: 590, width: 112, height: 54 }
+        { type: "start", label: this.game.t("buttons.startRun"), x: 106, y: 438, width: 168, height: 70 },
+        { type: "infinity", label: this.game.t("buttons.infinity"), x: 290, y: 438, width: 168, height: 70 },
+        { type: "stage", label: this.game.stageName(STAGES[this.stageIndex].id), x: 106, y: 522, width: 120, height: 54 },
+        { type: "rank", label: String(this.rank), x: 238, y: 522, width: 82, height: 54 },
+        { type: "language", label: this.game.getLocale().toUpperCase(), x: 332, y: 522, width: 70, height: 54 },
+        { type: "skin", label: String(this.skinIndex + 1) + " / " + String(skinCount), x: 414, y: 522, width: 60, height: 54 },
+        { type: "store", label: this.game.t("buttons.store"), x: 106, y: 590, width: 112, height: 54 },
+        { type: "codex", label: this.game.t("buttons.codex"), x: 234, y: 590, width: 112, height: 54 },
+        { type: "recipes", label: this.game.t("buttons.recipes"), x: 362, y: 590, width: 112, height: 54 }
       ];
     }
 
@@ -203,32 +206,59 @@
         return;
       }
       this.skinIndex = (this.skinIndex + delta + this.skins.length) % this.skins.length;
-      this.game.setSelectedSurvivorSkin(this.skins[this.skinIndex].id);
     }
 
     activateSelected(delta) {
+      var currentSkin = this.getCurrentSkin();
       if (this.selectedIndex === 0) {
+        this.modeIndex = 0;
         this.game.startSurvivor({
           stageId: STAGES[this.stageIndex].id,
-          hazardRank: this.rank
+          hazardRank: this.rank,
+          mode: "normal"
         });
       } else if (this.selectedIndex === 1) {
-        this.cycleStage(delta || 1);
+        this.modeIndex = 1;
+        this.game.startSurvivor({
+          stageId: STAGES[this.stageIndex].id,
+          hazardRank: this.rank,
+          mode: "infinity"
+        });
       } else if (this.selectedIndex === 2) {
-        this.cycleRank(delta || 1);
+        this.cycleStage(delta || 1);
       } else if (this.selectedIndex === 3) {
-        this.game.toggleLocale();
+        this.cycleRank(delta || 1);
       } else if (this.selectedIndex === 4) {
-        this.cycleSkin(delta || 1);
+        this.game.toggleLocale();
       } else if (this.selectedIndex === 5) {
+        if (currentSkin && this.game.ownsSkin && this.game.ownsSkin(currentSkin.id)) {
+          this.game.setSelectedSurvivorSkin(currentSkin.id);
+        } else {
+          this.game.openStore({
+            stageId: STAGES[this.stageIndex].id,
+            hazardRank: this.rank,
+            mode: this.modeIndex === 1 ? "infinity" : "normal",
+            focusSkinId: currentSkin ? currentSkin.id : ""
+          });
+        }
+      } else if (this.selectedIndex === 6) {
+        this.game.openStore({
+          stageId: STAGES[this.stageIndex].id,
+          hazardRank: this.rank,
+          mode: this.modeIndex === 1 ? "infinity" : "normal",
+          focusSkinId: currentSkin ? currentSkin.id : ""
+        });
+      } else if (this.selectedIndex === 7) {
         this.game.openCodex({
           stageId: STAGES[this.stageIndex].id,
-          hazardRank: this.rank
+          hazardRank: this.rank,
+          mode: this.modeIndex === 1 ? "infinity" : "normal"
         });
       } else {
         this.game.openRecipes({
           stageId: STAGES[this.stageIndex].id,
-          hazardRank: this.rank
+          hazardRank: this.rank,
+          mode: this.modeIndex === 1 ? "infinity" : "normal"
         });
       }
     }
@@ -258,24 +288,24 @@
         this.selectedIndex = (this.selectedIndex + 1) % buttons.length;
       }
       if (input.wasPressed("left")) {
-        if (this.selectedIndex === 1) {
+        if (this.selectedIndex === 2) {
           this.cycleStage(-1);
-        } else if (this.selectedIndex === 2) {
-          this.cycleRank(-1);
         } else if (this.selectedIndex === 3) {
-          this.game.toggleLocale();
+          this.cycleRank(-1);
         } else if (this.selectedIndex === 4) {
+          this.game.toggleLocale();
+        } else if (this.selectedIndex === 5) {
           this.cycleSkin(-1);
         }
       }
       if (input.wasPressed("right")) {
-        if (this.selectedIndex === 1) {
+        if (this.selectedIndex === 2) {
           this.cycleStage(1);
-        } else if (this.selectedIndex === 2) {
-          this.cycleRank(1);
         } else if (this.selectedIndex === 3) {
-          this.game.toggleLocale();
+          this.cycleRank(1);
         } else if (this.selectedIndex === 4) {
+          this.game.toggleLocale();
+        } else if (this.selectedIndex === 5) {
           this.cycleSkin(1);
         }
       }
@@ -297,8 +327,15 @@
       var ctx = renderer.ctx;
       var i;
       var stageName = this.game.stageName(STAGES[this.stageIndex].id);
+      var previewModeId = this.selectedIndex === 1 ? "infinity" : (this.selectedIndex === 0 ? "normal" : (this.modeIndex === 1 ? "infinity" : "normal"));
+      var modeName = this.game.modeName(previewModeId);
+      var bestTimeSec = previewModeId === "infinity" ? (survivorState.bestEndlessTimeSec || 0) : (survivorState.bestTimeSec || 0);
       var unlockedRank = this.getUnlockedRank();
       var currentSkin = this.getCurrentSkin();
+      var currentSkinOwned = currentSkin && this.game.ownsSkin && this.game.ownsSkin(currentSkin.id);
+      var currentSkinSelected = currentSkin && this.game.getSelectedSurvivorSkinId && this.game.getSelectedSurvivorSkinId() === currentSkin.id;
+      var nextScoreSkin = this.game.getNextScoreSkinUnlock ? this.game.getNextScoreSkinUnlock(survivorState.bestEndlessScore || 0) : null;
+      var statsDividerX = 742;
 
       renderer.clear("#120c08");
       renderer.drawPanel(44, 40, 872, 640, {
@@ -333,7 +370,7 @@
         size: 18,
         color: "#ff9c4b"
       });
-      renderer.drawParagraph(this.game.t("title.clearGoalBody"), 106, 350, 364, {
+      renderer.drawParagraph(this.game.t(previewModeId === "infinity" ? "title.clearGoalBodyInfinity" : "title.clearGoalBody"), 106, 350, 364, {
         size: 22,
         lineHeight: 30,
         color: "#f4f0da"
@@ -346,6 +383,14 @@
         size: 24,
         color: this.titlePulse % 2 > 1 ? "#fff1c4" : "#f4f0da"
       });
+      renderer.drawText(this.game.t("buttons.infinity"), 300, 396, {
+        size: 18,
+        color: "#f6c453"
+      });
+      renderer.drawText(modeName, 300, 422, {
+        size: 24,
+        color: previewModeId === "infinity" ? "#7fe6ff" : "#f4f0da"
+      });
 
       for (i = 0; i < buttons.length; i += 1) {
         var button = buttons[i];
@@ -353,6 +398,8 @@
         var hovered = i === this.hoverIndex;
         var titleKey = button.type === "start"
           ? "buttons.action"
+          : button.type === "infinity"
+            ? "buttons.infinity"
           : button.type === "stage"
             ? "buttons.stage"
             : button.type === "rank"
@@ -361,6 +408,8 @@
                 ? "buttons.language"
                 : button.type === "skin"
                   ? "buttons.skin"
+                : button.type === "store"
+                  ? "buttons.store"
                 : button.type === "codex"
                   ? "buttons.codex"
                   : "buttons.recipes";
@@ -370,12 +419,14 @@
             : "rgba(8, 8, 8, 0.92)",
           border: selected ? "#f6c453" : hovered ? "#ff9c4b" : "#5f4423"
         });
-        renderer.drawText(this.game.t(titleKey), button.x + 18, button.y + 12, {
-          size: 16,
-          color: selected ? "#fff1c4" : "#f4e0b6"
-        });
-        renderer.drawText(button.label, button.x + button.width / 2, button.y + 26, {
-          size: button.type === "start" ? 30 : 24,
+        if (button.type !== "start" && button.type !== "infinity") {
+          renderer.drawText(this.game.t(titleKey), button.x + 14, button.y + 10, {
+            size: 14,
+            color: selected ? "#fff1c4" : "#f4e0b6"
+          });
+        }
+        renderer.drawText(button.label, button.x + button.width / 2, button.type === "start" || button.type === "infinity" ? button.y + 20 : button.y + 28, {
+          size: button.type === "start" ? 20 : button.type === "infinity" ? 16 : (button.width < 90 ? 15 : button.width < 110 ? 18 : 20),
           align: "center",
           color: "#f4f0da"
         });
@@ -389,19 +440,30 @@
         size: 24,
         color: "#d6d0ff"
       });
+      ctx.save();
+      ctx.strokeStyle = "rgba(214, 208, 255, 0.22)";
+      ctx.beginPath();
+      ctx.moveTo(statsDividerX, 252);
+      ctx.lineTo(statsDividerX, 410);
+      ctx.stroke();
+      ctx.restore();
       renderer.drawText(
         this.game.t("common.time") + "  " +
-        Math.floor((survivorState.bestTimeSec || 0) / 60) + ":" +
-        String(Math.floor((survivorState.bestTimeSec || 0) % 60)).padStart(2, "0"),
+        Math.floor(bestTimeSec / 60) + ":" +
+        String(Math.floor(bestTimeSec % 60)).padStart(2, "0"),
         552,
-        294,
+        286,
         {
-          size: 28,
+          size: 24,
           color: "#f4f0da"
         }
       );
-      renderer.drawText(this.game.t("common.level") + " " + (survivorState.bestLevel || 1), 552, 334, {
-        size: 22,
+      renderer.drawText(this.game.t("common.bestScore") + " " + ((survivorState.bestEndlessScore || 0).toLocaleString ? (survivorState.bestEndlessScore || 0).toLocaleString() : (survivorState.bestEndlessScore || 0)), 552, 314, {
+        size: 17,
+        color: "#ffe07a"
+      });
+      renderer.drawText((previewModeId === "infinity" ? this.game.t("buttons.mode") + " " + modeName : this.game.t("common.level") + " " + (survivorState.bestLevel || 1)), 552, 338, {
+        size: 16,
         color: "#f4f0da"
       });
       renderer.drawText(
@@ -411,33 +473,62 @@
         552,
         360,
         {
-          size: 20,
+          size: 15,
           color: "#d8c8a4"
         }
       );
-      renderer.drawText(this.game.t("title.rankOpen", { rank: unlockedRank }), 552, 386, {
-        size: 16,
+      renderer.drawText(this.game.t("title.rankOpen", { rank: unlockedRank }), 552, 384, {
+        size: 14,
         color: "#ffe07a"
       });
+      if (nextScoreSkin) {
+        renderer.drawText(this.game.t("store.unlockAtScore", { score: nextScoreSkin.scoreThreshold.toLocaleString ? nextScoreSkin.scoreThreshold.toLocaleString() : nextScoreSkin.scoreThreshold }), 552, 402, {
+          size: 12,
+          color: "#9cffb8"
+        });
+      }
       if (currentSkin) {
-        renderer.drawText(this.game.t("buttons.skin"), 794, 244, {
-          size: 16,
+        renderer.drawText(this.game.t("buttons.skin"), 811, 246, {
+          size: 14,
           align: "center",
           color: currentSkin.color || "#d6d0ff"
         });
+        ctx.save();
+        ctx.strokeStyle = currentSkin.auraColor || currentSkin.color || "#d6d0ff";
+        ctx.globalAlpha = 0.2;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(811, 326, 34 + Math.sin(this.titlePulse * 4.5) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.12;
+        ctx.beginPath();
+        ctx.arc(811, 326, 44 + Math.cos(this.titlePulse * 3.8) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = currentSkin.auraColor || currentSkin.color || "#d6d0ff";
+        ctx.globalAlpha = 0.32;
+        ctx.fillRect(782, 286 + Math.sin(this.titlePulse * 6) * 3, 4, 4);
+        ctx.fillRect(838, 278 + Math.cos(this.titlePulse * 5.5) * 3, 4, 4);
+        ctx.restore();
         renderer.drawPixelSprite({
-          x: 746,
-          y: 258,
-          width: 96,
-          height: 136
+          x: 775,
+          y: 264,
+          width: 72,
+          height: 104
         }, "senpai", {
           variant: currentSkin.id,
+          moving: true,
+          walkPhase: this.titlePulse * 7,
           border: currentSkin.color || "#ffffff"
         });
-        renderer.drawText((currentSkin.name && (currentSkin.name[this.game.getLocale()] || currentSkin.name.en || currentSkin.name.ja)) || currentSkin.id, 794, 394, {
-          size: 16,
+        renderer.drawText((currentSkin.name && (currentSkin.name[this.game.getLocale()] || currentSkin.name.en || currentSkin.name.ja)) || currentSkin.id, 811, 378, {
+          size: 13,
           align: "center",
           color: "#f4f0da"
+        });
+        renderer.drawText(currentSkinSelected ? this.game.t("buttons.selected") : currentSkinOwned ? this.game.t("common.owned") : this.game.t("common.locked"), 811, 396, {
+          size: 12,
+          align: "center",
+          color: currentSkinSelected ? "#fff1c4" : currentSkinOwned ? "#9cffb8" : "#ff9c4b"
         });
       }
 
@@ -462,7 +553,7 @@
         drawMiniIcon(ctx, 618, rowY, row.rightColor, row.rightKind);
         renderer.drawText("=", 661, rowY + 8, { size: 22, color: "#fff1c4" });
         renderer.drawText(this.game.upgradeName(row.upgradeId), 690, rowY + 8, {
-          size: 18,
+          size: 16,
           color: "#f4f0da"
         });
       }

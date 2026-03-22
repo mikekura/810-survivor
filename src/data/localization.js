@@ -3,23 +3,30 @@
     en: {
       buttons: {
         startRun: "START RUN",
+        infinity: "INFINITY",
         title: "TITLE",
         retry: "RETRY",
         pause: "PAUSE",
         go: "GO",
         language: "LANG",
         skin: "SKIN",
+        store: "STORE",
         codex: "CODEX",
         recipes: "RECIPES",
         back: "BACK",
         buy: "BUY",
+        equip: "EQUIP",
+        selected: "EQUIPPED",
+        cancel: "CANCEL",
         leave: "LEAVE",
         action: "ACTION",
         stage: "STAGE",
-        rank: "RANK"
+        rank: "RANK",
+        mode: "MODE"
       },
       common: {
         bestRun: "BEST RUN",
+        bestScore: "BEST SCORE",
         clearGoal: "CLEAR GOAL",
         build: "BUILD",
         buildPicks: "BUILD PICKS",
@@ -40,19 +47,50 @@
         runs: "RUNS",
         time: "TIME",
         coins: "COINS",
+        score: "SCORE",
+        sold: "SOLD",
+        free: "FREE",
+        premium: "PREMIUM",
+        owned: "OWNED",
+        locked: "LOCKED",
+        price: "PRICE",
         surviveGoal: "SURVIVE 20:00"
+      },
+      modes: {
+        normal: "NORMAL",
+        infinity: "INFINITY"
+      },
+      store: {
+        title: "SKIN STORE",
+        subtitle: "Cosmetic-only skins. They do not change performance.",
+        hint: "Choose a skin on the left. Owned skins can be equipped here.",
+        lockedHint: "Locked skins open the purchase flow.",
+        scoreLockedHint: "This skin is score-unlocked. Reach its target in Infinity Mode to claim it.",
+        cosmeticOnly: "Cosmetic only: footsteps, attack flashes, and aura change. Stats stay the same.",
+        purchasePrompt: "Open Stripe checkout for this skin?",
+        purchaseNote: "This static build sends the player to a Stripe Payment Link. Secure unlock sync after payment needs a server and webhook.",
+        confirmNote: "If no payment link is configured yet, this button won't open checkout.",
+        checkoutOpened: "Stripe checkout opened in a new tab.",
+        checkoutMissing: "Stripe Payment Link is not set for this skin yet.",
+        unlocked: "SKIN UNLOCKED",
+        equipped: "SKIN EQUIPPED",
+        unlockAtScore: "Unlock at score {score}.",
+        scoreGoal: "SCORE {score}"
       },
       title: {
         subtitle: "MOUSE / TOUCH / WASD / ARROWS",
         intro: "20 minute survival. Time changes the enemy set, spawn speed, and pressure.",
         clearGoalBody: "Stay alive through 20:00 and beat the final boss.",
+        clearGoalBodyInfinity: "Survive until you fall. Score keeps climbing, and difficulty rises with every score spike.",
         buildGuide: "Suggested build routes inspired by survivor combo screens.",
         footerHint: "Z or click to choose. Left and right change stage and rank.",
-        rankOpen: "Unlocked rank: {rank}"
+        rankOpen: "Unlocked rank: {rank}",
+        scoreUnlocks: "Every 81,000 score unlocks a skin. 114,514 unlocks a special reward."
       },
       survivor: {
         title: "810 SURVIVOR",
         ready: "Mouse / Touch / WASD / Arrows",
+        infinityReady: "INFINITY MODE",
         paused: "PAUSED",
         pauseResume: "C or top button to resume",
         pauseRestart: "X or Retry to restart",
@@ -69,7 +107,12 @@
         eventAt: "EVENT {time}",
         phaseEnter: "PHASE {phase}",
         levelLabel: "LEVEL {level}",
-        rankUnlocked: "RANK {rank} UNLOCKED"
+        rankUnlocked: "RANK {rank} UNLOCKED",
+        dangerTier: "DANGER TIER {tier}",
+        scoreUnlocked: "{skin} unlocked!",
+        specialScoreUnlocked: "SPECIAL SKIN UNLOCKED: {skin}",
+        merchantTitle: "5:00 MERCHANT",
+        merchantName: "Midsummer Merchant"
       },
       stages: {
         stationFront: "Station Front",
@@ -111,6 +154,11 @@
         mirrorMoth: "Mirror Moth",
         sunspotMine: "Sunspot Mine",
         heatIdol: "Heat Idol",
+        toastPhantom: "Toast Phantom",
+        forgeSmith: "Forge Smith",
+        brainGolem: "Brain Golem",
+        cometHeron: "Comet Heron",
+        abyssPriest: "Abyss Priest",
         stationLord: "Station Lord",
         arcadeLord: "Arcade Lord",
         poolLord: "Pool Lord",
@@ -133,7 +181,13 @@
         lucky810: { name: "Lucky 810", desc: "More XP and a better chance of extra drops." },
         droneBuddy: { name: "Buddy Drone", desc: "A side drone auto-fires at the nearest enemy." },
         backstepVolley: { name: "Backstep Volley", desc: "Basic fire also shoots behind you." },
-        heatSink: { name: "Heat Sink", desc: "Bullet speed and special cooldowns improve." }
+        heatSink: { name: "Heat Sink", desc: "Bullet speed and special cooldowns improve." },
+        neonNeedle: { name: "Neon Needle", desc: "Fires a tight volley of fast homing needles." },
+        meteorCall: { name: "Meteor Call", desc: "Calls down a meteor on the nearest crowd." },
+        haloSigil: { name: "Halo Sigil", desc: "Orbiting sigils slice nearby enemies on contact." },
+        summerSword: { name: "Summer Sword", desc: "A forward crescent slash. Range and slash count grow." },
+        breakerAxe: { name: "Breaker Axe", desc: "A heavy sweep with impact burst damage at the edge." },
+        mysticWand: { name: "Mystic Wand", desc: "Casts homing bolts with a glowing summoning ring." }
       },
       pickups: {
         xp: "XP Crystal",
@@ -150,23 +204,30 @@
     ja: {
       buttons: {
         startRun: "\u30b9\u30bf\u30fc\u30c8",
+        infinity: "\u30a4\u30f3\u30d5\u30a3\u30cb\u30c6\u30a3",
         title: "\u30bf\u30a4\u30c8\u30eb",
         retry: "\u30ea\u30c8\u30e9\u30a4",
         pause: "\u4e00\u6642\u505c\u6b62",
         go: "\u518d\u958b",
         language: "\u8a00\u8a9e",
         skin: "\u30b9\u30ad\u30f3",
+        store: "\u30b7\u30e7\u30c3\u30d7",
         codex: "\u56f3\u9451",
         recipes: "\u30ec\u30b7\u30d4",
         back: "\u623b\u308b",
         buy: "\u8cfc\u5165",
+        equip: "\u88c5\u5099",
+        selected: "\u88c5\u5099\u4e2d",
+        cancel: "\u30ad\u30e3\u30f3\u30bb\u30eb",
         leave: "\u9589\u3058\u308b",
         action: "\u6c7a\u5b9a",
         stage: "\u30b9\u30c6\u30fc\u30b8",
-        rank: "\u30e9\u30f3\u30af"
+        rank: "\u30e9\u30f3\u30af",
+        mode: "\u30e2\u30fc\u30c9"
       },
       common: {
         bestRun: "\u30d9\u30b9\u30c8\u30e9\u30f3",
+        bestScore: "\u30d9\u30b9\u30c8\u30b9\u30b3\u30a2",
         clearGoal: "\u30af\u30ea\u30a2\u76ee\u6a19",
         build: "\u30d3\u30eb\u30c9",
         buildPicks: "\u30d3\u30eb\u30c9\u5019\u88dc",
@@ -187,19 +248,50 @@
         runs: "\u30d7\u30ec\u30a4",
         time: "\u6642\u9593",
         coins: "\u30b3\u30a4\u30f3",
+        score: "\u30b9\u30b3\u30a2",
+        sold: "\u58f2\u5207",
+        free: "\u7121\u6599",
+        premium: "\u30d7\u30ec\u30df\u30a2\u30e0",
+        owned: "\u6240\u6301\u6e08\u307f",
+        locked: "\u672a\u6240\u6301",
+        price: "\u4fa1\u683c",
         surviveGoal: "20:00 \u751f\u5b58"
+      },
+      modes: {
+        normal: "\u30ce\u30fc\u30de\u30eb",
+        infinity: "\u30a4\u30f3\u30d5\u30a3\u30cb\u30c6\u30a3"
+      },
+      store: {
+        title: "\u30b9\u30ad\u30f3\u30b9\u30c8\u30a2",
+        subtitle: "\u30b9\u30ad\u30f3\u306f\u3059\u3079\u3066\u898b\u305f\u76ee\u5c02\u7528\u3002\u6027\u80fd\u306f\u5909\u308f\u3089\u306a\u3044\u3002",
+        hint: "\u5de6\u3067\u30b9\u30ad\u30f3\u3092\u9078\u3073\u3001\u6240\u6301\u6e08\u307f\u306a\u3089\u3053\u3053\u3067\u88c5\u5099\u3067\u304d\u308b\u3002",
+        lockedHint: "\u672a\u6240\u6301\u306e\u30b9\u30ad\u30f3\u306f\u8cfc\u5165\u30d5\u30ed\u30fc\u304c\u958b\u304f\u3002",
+        scoreLockedHint: "\u3053\u306e\u30b9\u30ad\u30f3\u306f\u30b9\u30b3\u30a2\u89e3\u653e\u5c02\u7528\u3002\u30a4\u30f3\u30d5\u30a3\u30cb\u30c6\u30a3\u3067\u8981\u6c42\u30b9\u30b3\u30a2\u3092\u8d85\u3048\u308b\u3068\u7372\u5f97\u3067\u304d\u308b\u3002",
+        cosmeticOnly: "\u6b69\u304d\u8de1\u3001\u653b\u6483\u30a8\u30d5\u30a7\u30af\u30c8\u3001\u30aa\u30fc\u30e9\u3060\u3051\u304c\u5909\u5316\u3002\u80fd\u529b\u5024\u306f\u540c\u3058\u3002",
+        purchasePrompt: "\u3053\u306e\u30b9\u30ad\u30f3\u306e Stripe \u6c7a\u6e08\u753b\u9762\u3092\u958b\u304d\u307e\u3059\u304b\uff1f",
+        purchaseNote: "\u3053\u306e\u9759\u7684\u7248\u306f Stripe Payment Link \u3078\u9077\u79fb\u3059\u308b\u3060\u3051\u3002\u652f\u6255\u3044\u5f8c\u306e\u5b89\u5168\u306a\u89e3\u653e\u9023\u643a\u306b\u306f\u30b5\u30fc\u30d0\u30fc\u3068 webhook \u304c\u5fc5\u8981\u3002",
+        confirmNote: "\u307e\u3060 Payment Link \u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u306a\u3044\u5834\u5408\u3001\u78ba\u5b9a\u3057\u3066\u3082\u6c7a\u6e08\u753b\u9762\u306f\u958b\u304b\u306a\u3044\u3002",
+        checkoutOpened: "Stripe \u6c7a\u6e08\u753b\u9762\u3092\u65b0\u3057\u3044\u30bf\u30d6\u3067\u958b\u3044\u305f\u3002",
+        checkoutMissing: "\u3053\u306e\u30b9\u30ad\u30f3\u306e Stripe Payment Link \u304c\u307e\u3060\u672a\u8a2d\u5b9a\u3002",
+        unlocked: "\u30b9\u30ad\u30f3\u89e3\u653e",
+        equipped: "\u30b9\u30ad\u30f3\u88c5\u5099",
+        unlockAtScore: "\u30b9\u30b3\u30a2 {score} \u3067\u89e3\u653e\u3002",
+        scoreGoal: "\u30b9\u30b3\u30a2 {score}"
       },
       title: {
         subtitle: "\u30de\u30a6\u30b9 / \u30bf\u30c3\u30c1 / WASD / \u77e2\u5370\u30ad\u30fc",
         intro: "20\u5206\u9593\u751f\u304d\u6b8b\u308b\u30b5\u30d0\u30a4\u30d0\u30fc\u3002\u6642\u9593\u7d4c\u904e\u3067\u6575\u306e\u7a2e\u985e\u3001\u51fa\u73fe\u901f\u5ea6\u3001\u5727\u304c\u5909\u5316\u3059\u308b\u3002",
         clearGoalBody: "20:00\u307e\u3067\u751f\u304d\u6b8b\u308a\u3001\u6700\u5f8c\u306e\u30dc\u30b9\u3092\u5012\u305b\u3002",
+        clearGoalBodyInfinity: "\u5012\u308c\u308b\u307e\u3067\u6c38\u9060\u306b\u751f\u5b58\u3002\u30b9\u30b3\u30a2\u3068\u3068\u3082\u306b\u96e3\u6613\u5ea6\u3082\u4e0a\u304c\u308b\u3002",
         buildGuide: "\u30b5\u30d0\u30a4\u30d0\u30fc\u98a8\u306e\u7d44\u307f\u5408\u308f\u305b\u4f8b\u3002",
         footerHint: "Z\u304b\u30af\u30ea\u30c3\u30af\u3067\u6c7a\u5b9a\u3002\u5de6\u53f3\u3067\u30b9\u30c6\u30fc\u30b8\u3068\u30e9\u30f3\u30af\u3092\u5909\u66f4\u3002",
-        rankOpen: "\u89e3\u653e\u6e08\u307f\u30e9\u30f3\u30af: {rank}"
+        rankOpen: "\u89e3\u653e\u6e08\u307f\u30e9\u30f3\u30af: {rank}",
+        scoreUnlocks: "81000 \u30b9\u30b3\u30a2\u3054\u3068\u306b\u30b9\u30ad\u30f3\u89e3\u653e\u3002114514 \u3067\u7279\u5225\u30b9\u30ad\u30f3\u3002"
       },
       survivor: {
         title: "810 SURVIVOR",
         ready: "\u30de\u30a6\u30b9 / \u30bf\u30c3\u30c1 / WASD / \u77e2\u5370\u30ad\u30fc\u5bfe\u5fdc",
+        infinityReady: "\u30a4\u30f3\u30d5\u30a3\u30cb\u30c6\u30a3\u30e2\u30fc\u30c9",
         paused: "\u4e00\u6642\u505c\u6b62\u4e2d",
         pauseResume: "C \u304b\u4e0a\u306e\u30dc\u30bf\u30f3\u3067\u518d\u958b",
         pauseRestart: "X \u304b\u30ea\u30c8\u30e9\u30a4\u3067\u3084\u308a\u76f4\u3057",
@@ -216,7 +308,12 @@
         eventAt: "\u30a4\u30d9\u30f3\u30c8 {time}",
         phaseEnter: "\u30d5\u30a7\u30fc\u30ba {phase}",
         levelLabel: "\u30ec\u30d9\u30eb {level}",
-        rankUnlocked: "\u30e9\u30f3\u30af {rank} \u89e3\u653e"
+        rankUnlocked: "\u30e9\u30f3\u30af {rank} \u89e3\u653e",
+        dangerTier: "\u5371\u967a\u5ea6 {tier}",
+        scoreUnlocked: "{skin} \u89e3\u653e!",
+        specialScoreUnlocked: "\u7279\u5225\u30b9\u30ad\u30f3\u89e3\u653e: {skin}",
+        merchantTitle: "5:00 \u5546\u4eba",
+        merchantName: "\u771f\u590f\u5546\u4eba"
       },
       stages: {
         stationFront: "\u99c5\u524d",
@@ -258,6 +355,11 @@
         mirrorMoth: "\u30df\u30e9\u30fc\u30e2\u30b9",
         sunspotMine: "\u30b5\u30f3\u30b9\u30dd\u30c3\u30c8\u5730\u96f7",
         heatIdol: "\u71b1\u306e\u5076\u50cf",
+        toastPhantom: "\u30c8\u30fc\u30b9\u30c8\u30d5\u30a1\u30f3\u30c8\u30e0",
+        forgeSmith: "\u7089\u306e\u9376\u5e2b",
+        brainGolem: "\u30d6\u30ec\u30a4\u30f3\u30b4\u30fc\u30ec\u30e0",
+        cometHeron: "\u30b3\u30e1\u30c3\u30c8\u30d8\u30ed\u30f3",
+        abyssPriest: "\u6df5\u306e\u53f8\u796d",
         stationLord: "\u99c5\u524d\u306e\u4e3b",
         arcadeLord: "\u5546\u5e97\u8857\u306e\u4e3b",
         poolLord: "\u30d7\u30fc\u30eb\u306e\u4e3b",
@@ -280,7 +382,13 @@
         lucky810: { name: "\u30e9\u30c3\u30ad\u30fc810", desc: "XP\u5897\u52a0\u3002\u8ffd\u52a0\u30c9\u30ed\u30c3\u30d7\u306e\u767a\u751f\u7387\u3082\u4e0a\u304c\u308b\u3002" },
         droneBuddy: { name: "\u30d0\u30c7\u30a3\u30c9\u30ed\u30fc\u30f3", desc: "\u5074\u885b\u30c9\u30ed\u30fc\u30f3\u304c\u6700\u3082\u8fd1\u3044\u6575\u3078\u81ea\u52d5\u5c04\u6483\u3002" },
         backstepVolley: { name: "\u30d0\u30c3\u30af\u30b9\u30c6\u30c3\u30d7\u5f3e\u5e55", desc: "\u901a\u5e38\u653b\u6483\u3068\u540c\u6642\u306b\u80cc\u5f8c\u3078\u3082\u5c04\u6483\u3002" },
-        heatSink: { name: "\u30d2\u30fc\u30c8\u30b7\u30f3\u30af", desc: "\u5f3e\u901f\u304c\u4e0a\u304c\u308a\u3001\u7279\u6b8a\u653b\u6483\u306e\u518d\u4f7f\u7528\u3082\u901f\u304f\u306a\u308b\u3002" }
+        heatSink: { name: "\u30d2\u30fc\u30c8\u30b7\u30f3\u30af", desc: "\u5f3e\u901f\u304c\u4e0a\u304c\u308a\u3001\u7279\u6b8a\u653b\u6483\u306e\u518d\u4f7f\u7528\u3082\u901f\u304f\u306a\u308b\u3002" },
+        neonNeedle: { name: "\u30cd\u30aa\u30f3\u30cb\u30fc\u30c9\u30eb", desc: "\u9ad8\u901f\u3067\u8ffd\u5c3e\u3059\u308b\u7d30\u91dd\u5f3e\u3092\u9023\u5c04\u3059\u308b\u3002" },
+        meteorCall: { name: "\u96a8\u77f3\u843d\u3068\u3057", desc: "\u6700\u3082\u5bc6\u96c6\u3057\u305f\u6575\u306e\u8fd1\u304f\u306b\u96a8\u77f3\u3092\u843d\u3068\u3059\u3002" },
+        haloSigil: { name: "\u30cf\u30ed\u30fc\u30b7\u30b8\u30eb", desc: "\u5468\u56de\u3059\u308b\u7d0b\u69d8\u304c\u8fd1\u3044\u6575\u3092\u5207\u308a\u88c2\u304f\u3002" },
+        summerSword: { name: "\u30b5\u30de\u30fc\u30bd\u30fc\u30c9", desc: "\u524d\u65b9\u3092\u65ac\u308b\u5f27\u72b6\u30b9\u30e9\u30c3\u30b7\u30e5\u3002\u5c04\u7a0b\u3068\u8ffd\u65ac\u304c\u4f38\u3073\u308b\u3002" },
+        breakerAxe: { name: "\u30d6\u30ec\u30a4\u30ab\u30fc\u30a2\u30c3\u30af\u30b9", desc: "\u91cd\u3044\u6a2a\u8599\u304e\u3002\u5203\u5148\u3067\u8ffd\u52a0\u885d\u6483\u304c\u767a\u751f\u3059\u308b\u3002" },
+        mysticWand: { name: "\u9b54\u6cd5\u306e\u6756", desc: "\u9b54\u6cd5\u9663\u3068\u3068\u3082\u306b\u8ffd\u5c3e\u5f3e\u3092\u653e\u3064\u3002" }
       },
       pickups: {
         xp: "XP\u7d50\u6676",

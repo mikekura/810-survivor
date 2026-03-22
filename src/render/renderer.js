@@ -893,6 +893,89 @@
           ctx.fillRect(r * 0.06, -r * 0.16, r * 0.14, r * 0.14);
           ctx.fillRect(-r * 0.12, r * 0.24, r * 0.24, r * 0.1);
           break;
+        case "toastPhantom":
+          ctx.fillStyle = "#ff9dc9";
+          ctx.beginPath();
+          ctx.moveTo(0, -r);
+          ctx.bezierCurveTo(r * 0.74, -r * 0.5, r * 0.82, r * 0.44, r * 0.26, r);
+          ctx.lineTo(0, r * 0.54);
+          ctx.lineTo(-r * 0.28, r);
+          ctx.bezierCurveTo(-r * 0.86, r * 0.44, -r * 0.76, -r * 0.5, 0, -r);
+          ctx.fill();
+          ctx.fillStyle = "#fff1f5";
+          ctx.fillRect(-r * 0.22, -r * 0.18, r * 0.12, r * 0.12);
+          ctx.fillRect(r * 0.04, -r * 0.12, r * 0.1, r * 0.1);
+          break;
+        case "forgeSmith":
+          ctx.fillStyle = "#eceef2";
+          ctx.beginPath();
+          ctx.arc(0, -r * 0.2, r * 0.58, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#9196a3";
+          ctx.fillRect(-r * 0.56, -r * 0.08, r * 1.12, r * 0.94);
+          ctx.fillStyle = "#5f6674";
+          ctx.fillRect(r * 0.28, -r * 0.22, r * 0.5, r * 0.16);
+          ctx.fillStyle = "#20232a";
+          ctx.fillRect(-r * 0.16, -r * 0.28, r * 0.1, r * 0.1);
+          ctx.fillRect(r * 0.04, -r * 0.28, r * 0.1, r * 0.1);
+          break;
+        case "brainGolem":
+          ctx.fillStyle = "#a74b59";
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.84, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#efb5b5";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.4, -r * 0.46);
+          ctx.bezierCurveTo(-r * 0.1, -r * 0.2, -r * 0.1, 0, -r * 0.34, r * 0.2);
+          ctx.moveTo(r * 0.36, -r * 0.4);
+          ctx.bezierCurveTo(r * 0.06, -r * 0.16, r * 0.02, 0, r * 0.28, r * 0.3);
+          ctx.moveTo(-r * 0.06, -r * 0.52);
+          ctx.bezierCurveTo(r * 0.18, -r * 0.24, r * 0.14, 0, -r * 0.02, r * 0.38);
+          ctx.stroke();
+          break;
+        case "cometHeron":
+          ctx.fillStyle = "#ffcc7d";
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.84, -r * 0.28);
+          ctx.lineTo(0, -r * 0.56);
+          ctx.lineTo(r * 0.94, 0);
+          ctx.lineTo(0, r * 0.36);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#7fe6ff";
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.24, r * 0.06);
+          ctx.lineTo(-r * 0.92, r * 0.72);
+          ctx.lineTo(-r * 0.18, r * 0.34);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        case "abyssPriest":
+          ctx.fillStyle = "#181118";
+          ctx.beginPath();
+          ctx.moveTo(0, -r);
+          ctx.lineTo(r * 0.74, -r * 0.16);
+          ctx.lineTo(r * 0.42, r);
+          ctx.lineTo(-r * 0.42, r);
+          ctx.lineTo(-r * 0.74, -r * 0.16);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#d9d1ff";
+          ctx.fillRect(-r * 0.14, -r * 0.18, r * 0.1, r * 0.1);
+          ctx.fillRect(r * 0.04, -r * 0.18, r * 0.1, r * 0.1);
+          ctx.strokeStyle = "#d9d1ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(r * 0.9, -r * 0.16);
+          ctx.lineTo(r * 1.18, 0);
+          ctx.lineTo(r * 0.9, r * 0.16);
+          ctx.moveTo(-r * 0.9, -r * 0.16);
+          ctx.lineTo(-r * 1.18, 0);
+          ctx.lineTo(-r * 0.9, r * 0.16);
+          ctx.stroke();
+          break;
         case "stationLord":
         case "arcadeLord":
         case "poolLord":

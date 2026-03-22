@@ -1,44 +1,67 @@
 (function (ns) {
-  ns.MonetizationSystem = class {
-    constructor(state) {
-      this.state = state;
-      this.lastMessage = "支援は任意です。本編は最後までそのまま遊べます。";
+  function createAdUnit(clientId, slotId, fullWidthResponsive) {
+    var ad = document.createElement("ins");
+    ad.className = "adsbygoogle";
+    ad.style.display = "block";
+    ad.setAttribute("data-ad-client", clientId);
+    ad.setAttribute("data-ad-slot", slotId);
+    ad.setAttribute("data-ad-format", "auto");
+    if (fullWidthResponsive) {
+      ad.setAttribute("data-full-width-responsive", "true");
     }
+    return ad;
+  }
 
-    getCatalog() {
-      return ns.supportCatalog.slice();
-    }
+  ns.Monetization = {
+    init: function () {
+      var config = ns.commerceConfig || {};
+      var ads = config.adsense || {};
+      var publisherId = ads.publisherId || "";
+      var topSlot = ads.topSlot || "";
+      var bottomSlot = ads.bottomSlot || "";
+      var topContainer = document.getElementById("ad-top");
+      var bottomContainer = document.getElementById("ad-bottom");
+      var script;
 
-    isUnlocked(id) {
-      return !!this.state.supportUnlocks[id];
-    }
+      if (!topContainer || !bottomContainer) {
+        return;
+      }
 
-    unlock(id) {
-      this.state.supportUnlocks[id] = true;
-    }
+      if (!publisherId) {
+        topContainer.hidden = true;
+        bottomContainer.hidden = true;
+        return;
+      }
 
-    purchase(id) {
-      var item = this.getCatalog().find(function (entry) {
-        return entry.id === id;
+      topContainer.hidden = !topSlot;
+      bottomContainer.hidden = !bottomSlot;
+
+      script = document.createElement("script");
+      script.async = true;
+      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(publisherId);
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+
+      if (topSlot) {
+        topContainer.innerHTML = "";
+        topContainer.appendChild(createAdUnit(publisherId, topSlot, true));
+      }
+      if (bottomSlot) {
+        bottomContainer.innerHTML = "";
+        bottomContainer.appendChild(createAdUnit(publisherId, bottomSlot, true));
+      }
+
+      script.addEventListener("load", function () {
+        if (!window.adsbygoogle) {
+          return;
+        }
+        if (topSlot) {
+          window.adsbygoogle.push({});
+        }
+        if (bottomSlot) {
+          window.adsbygoogle.push({});
+        }
       });
-
-      if (!item) {
-        this.lastMessage = "支援項目が見つかりません。";
-        return this.lastMessage;
-      }
-
-      if (this.isUnlocked(id)) {
-        this.lastMessage = item.name + " は既に解放済みです。";
-        return this.lastMessage;
-      }
-
-      this.unlock(id);
-      this.lastMessage = item.name + " を解放しました。公開時はここを投稿サイトの決済導線に差し替えてください。";
-      return this.lastMessage;
-    }
-
-    getAccentColor() {
-      return this.isUnlocked("palette-pack") ? "#74d6ff" : ns.constants.COLORS.accent;
     }
   };
 })(window.ManatsuRPG = window.ManatsuRPG || {});

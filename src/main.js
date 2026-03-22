@@ -4,6 +4,9 @@
     if (!canvas) {
       return;
     }
+    if (ns.Monetization && ns.Monetization.init) {
+      ns.Monetization.init();
+    }
     var game = new ns.Game(canvas);
     game.start();
   });

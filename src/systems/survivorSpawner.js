@@ -282,7 +282,9 @@
         hp: Math.round(archetype.hp * hpMultiplier),
         maxHp: Math.round(archetype.hp * hpMultiplier),
         speed: archetype.speed * speedMultiplier,
+        baseSpeed: archetype.speed * speedMultiplier,
         damage: Math.max(1, Math.round(archetype.damage * damageMultiplier)),
+        baseDamage: Math.max(1, Math.round(archetype.damage * damageMultiplier)),
         xp: Math.max(1, Math.round(archetype.xp * (1 + elapsedSec / 1200 * 0.18))),
         tags: (archetype.tags || []).slice(),
         levelScale: timeScale,
@@ -332,17 +334,24 @@
         result.activePhaseId = activePhase.id;
         var state = this.ensurePhaseState(activePhase);
         var variant = state.chosenVariant;
+        var spawnIntensity = runtime && typeof runtime.spawnIntensity === "number"
+          ? Math.max(0, runtime.spawnIntensity)
+          : 0;
         if (!variant) {
           variant = this.choosePhaseVariant(activePhase, state);
         }
 
         if (variant) {
           var aliveCount = this.getEnemyCount(runtime);
-          var maxAlive = (variant.director && variant.director.maxAlive) || 40;
+          var maxAlive = ((variant.director && variant.director.maxAlive) || 40) + Math.min(72, Math.floor(spawnIntensity * 4));
+          var spawnInterval = Math.max(
+            0.12,
+            (((variant.director && variant.director.spawnInterval) || 1) / (1 + spawnIntensity * 0.07))
+          );
           state.spawnTimer -= dt;
 
           while (state.spawnTimer <= 0) {
-            state.spawnTimer += Math.max(0.16, (variant.director && variant.director.spawnInterval) || 1);
+            state.spawnTimer += spawnInterval;
             if (aliveCount + result.spawned.length >= maxAlive) {
               break;
             }

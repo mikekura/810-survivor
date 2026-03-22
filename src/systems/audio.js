@@ -195,6 +195,17 @@
             { note: "E5", delay: 0.28, duration: 0.32, type: "sine", volume: 0.03 }
           ]);
           break;
+        case "legendChest":
+          this.playSequence([
+            { note: "A3", delay: 0, duration: 0.12, type: "square", volume: 0.048 },
+            { note: "E4", delay: 0.06, duration: 0.14, type: "square", volume: 0.044 },
+            { note: "A4", delay: 0.14, duration: 0.16, type: "triangle", volume: 0.04 },
+            { note: "C5", delay: 0.24, duration: 0.18, type: "triangle", volume: 0.036 },
+            { note: "E5", delay: 0.34, duration: 0.26, type: "sine", volume: 0.034 },
+            { note: "A5", delay: 0.48, duration: 0.48, type: "sine", volume: 0.03 },
+            { note: "C6", delay: 0.66, duration: 0.54, type: "triangle", volume: 0.026 }
+          ]);
+          break;
         case "item114514":
           this.playSequence([
             { note: "A3", delay: 0, duration: 0.1, type: "square", volume: 0.046 },

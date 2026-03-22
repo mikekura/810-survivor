@@ -1,5 +1,9 @@
 (function (ns) {
   var RUN_LENGTH_SEC = 20 * 60;
+  var INFINITY_SCORE_STEP = 81000;
+  var SPECIAL_SCORE_STEP = 114514;
+  var ENDLESS_LOOP_START_SEC = 8 * 60;
+  var ENDLESS_LOOP_RANGE_SEC = RUN_LENGTH_SEC - ENDLESS_LOOP_START_SEC - 8;
   var VIEW_MARGIN = 160;
   var DESPAWN_DISTANCE = 1700;
   var LEVELUP_CARD_WIDTH = 430;
@@ -29,7 +33,13 @@
     lucky810: { color: "#ffe9a1", maxLevel: 4, weight: 4 },
     droneBuddy: { color: "#9fd4ff", maxLevel: 4, weight: 5 },
     backstepVolley: { color: "#ffcf9d", maxLevel: 4, weight: 5 },
-    heatSink: { color: "#ff9f76", maxLevel: 4, weight: 5 }
+    heatSink: { color: "#ff9f76", maxLevel: 4, weight: 5 },
+    neonNeedle: { color: "#9fc8ff", maxLevel: 5, weight: 6 },
+    meteorCall: { color: "#ff9a76", maxLevel: 5, weight: 5 },
+    haloSigil: { color: "#d7c8ff", maxLevel: 5, weight: 5 },
+    summerSword: { color: "#ffe7a6", maxLevel: 5, weight: 6 },
+    breakerAxe: { color: "#ffc38f", maxLevel: 5, weight: 5 },
+    mysticWand: { color: "#c9b2ff", maxLevel: 5, weight: 6 }
   };
 
   function clamp(value, min, max) {
@@ -45,6 +55,10 @@
     var minutes = Math.floor(safeSec / 60);
     var seconds = safeSec % 60;
     return minutes + ":" + String(seconds).padStart(2, "0");
+  }
+
+  function formatScore(total) {
+    return Math.max(0, Math.floor(total || 0)).toLocaleString();
   }
 
   function distanceSquared(a, b) {
@@ -88,6 +102,10 @@
     return pointDistance(px, py, cx, cy);
   }
 
+  function angleDifference(a, b) {
+    return Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  }
+
   function pickWeighted(rng, entries) {
     var total = 0;
     var i;
@@ -110,6 +128,33 @@
 
   function getStageTheme(stageId) {
     return STAGE_THEMES[stageId] || STAGE_THEMES.stationFront;
+  }
+
+  function mixColor(a, b, t) {
+    var ratio = clamp(t, 0, 1);
+    var ar = parseInt(a.slice(1, 3), 16);
+    var ag = parseInt(a.slice(3, 5), 16);
+    var ab = parseInt(a.slice(5, 7), 16);
+    var br = parseInt(b.slice(1, 3), 16);
+    var bg = parseInt(b.slice(3, 5), 16);
+    var bb = parseInt(b.slice(5, 7), 16);
+    var rr = Math.round(ar + (br - ar) * ratio).toString(16).padStart(2, "0");
+    var rg = Math.round(ag + (bg - ag) * ratio).toString(16).padStart(2, "0");
+    var rb = Math.round(ab + (bb - ab) * ratio).toString(16).padStart(2, "0");
+    return "#" + rr + rg + rb;
+  }
+
+  function getStageShiftIndex(elapsedSec) {
+    if (elapsedSec >= 15 * 60) {
+      return 3;
+    }
+    if (elapsedSec >= 10 * 60) {
+      return 2;
+    }
+    if (elapsedSec >= 5 * 60) {
+      return 1;
+    }
+    return 0;
   }
 
   function translate(game, key, vars) {
@@ -156,6 +201,10 @@
     return (ns.survivorMeta && ns.survivorMeta.fusionRecipes) || [];
   }
 
+  function getTrueFusionRecipes() {
+    return (ns.survivorMeta && ns.survivorMeta.trueFusionRecipes) || [];
+  }
+
   function getMerchantCatalog() {
     return (ns.survivorMeta && ns.survivorMeta.merchantOffers) || [];
   }
@@ -173,6 +222,17 @@
 
   function findFusionRecipeById(recipeId) {
     var recipes = getFusionRecipes();
+    var i;
+    for (i = 0; i < recipes.length; i += 1) {
+      if (recipes[i].id === recipeId) {
+        return recipes[i];
+      }
+    }
+    return null;
+  }
+
+  function findTrueFusionRecipeById(recipeId) {
+    var recipes = getTrueFusionRecipes();
     var i;
     for (i = 0; i < recipes.length; i += 1) {
       if (recipes[i].id === recipeId) {
@@ -354,6 +414,99 @@
         ctx.fillStyle = "#fff1c4";
         ctx.fillRect(left + inner * 0.42, top + inner * 0.24, inner * 0.16, inner * 0.24);
         break;
+      case "neonNeedle":
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(-0.55);
+        ctx.fillRect(-inner * 0.24, -inner * 0.06, inner * 0.5, inner * 0.12);
+        ctx.fillStyle = "#fff1c4";
+        ctx.beginPath();
+        ctx.moveTo(inner * 0.3, 0);
+        ctx.lineTo(inner * 0.06, -inner * 0.12);
+        ctx.lineTo(inner * 0.06, inner * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        break;
+      case "meteorCall":
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(centerX - inner * 0.22, top + inner * 0.18);
+        ctx.lineTo(centerX + inner * 0.18, top + inner * 0.46);
+        ctx.lineTo(centerX - inner * 0.04, top + inner * 0.74);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#fff1c4";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX - inner * 0.28, top + inner * 0.1);
+        ctx.lineTo(centerX + inner * 0.3, top + inner * 0.58);
+        ctx.stroke();
+        break;
+      case "haloSigil":
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, inner * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(centerX, top + inner * 0.1);
+        ctx.lineTo(centerX + inner * 0.1, centerY - inner * 0.08);
+        ctx.lineTo(left + inner * 0.9, centerY);
+        ctx.lineTo(centerX + inner * 0.1, centerY + inner * 0.08);
+        ctx.lineTo(centerX, top + inner * 0.9);
+        ctx.lineTo(centerX - inner * 0.1, centerY + inner * 0.08);
+        ctx.lineTo(left + inner * 0.1, centerY);
+        ctx.lineTo(centerX - inner * 0.1, centerY - inner * 0.08);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+      case "summerSword":
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(-0.8);
+        ctx.fillRect(-inner * 0.06, -inner * 0.34, inner * 0.12, inner * 0.52);
+        ctx.fillStyle = "#fff1c4";
+        ctx.fillRect(-inner * 0.03, -inner * 0.3, inner * 0.06, inner * 0.42);
+        ctx.fillStyle = color;
+        ctx.fillRect(-inner * 0.18, inner * 0.16, inner * 0.36, inner * 0.08);
+        ctx.restore();
+        break;
+      case "breakerAxe":
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(-0.44);
+        ctx.fillStyle = "#f0e7da";
+        ctx.fillRect(-inner * 0.04, -inner * 0.34, inner * 0.08, inner * 0.62);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(-inner * 0.06, -inner * 0.26);
+        ctx.lineTo(inner * 0.28, -inner * 0.34);
+        ctx.lineTo(inner * 0.34, -inner * 0.08);
+        ctx.lineTo(inner * 0.02, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        break;
+      case "mysticWand":
+        ctx.fillRect(left + inner * 0.44, top + inner * 0.18, inner * 0.12, inner * 0.52);
+        ctx.fillStyle = "#fff1c4";
+        ctx.beginPath();
+        ctx.arc(centerX, top + inner * 0.16, inner * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(centerX, top + inner * 0.03);
+        ctx.lineTo(centerX + inner * 0.07, top + inner * 0.12);
+        ctx.lineTo(centerX + inner * 0.18, top + inner * 0.15);
+        ctx.lineTo(centerX + inner * 0.08, top + inner * 0.22);
+        ctx.lineTo(centerX + inner * 0.12, top + inner * 0.32);
+        ctx.lineTo(centerX, top + inner * 0.26);
+        ctx.lineTo(centerX - inner * 0.12, top + inner * 0.32);
+        ctx.lineTo(centerX - inner * 0.08, top + inner * 0.22);
+        ctx.lineTo(centerX - inner * 0.18, top + inner * 0.15);
+        ctx.lineTo(centerX - inner * 0.07, top + inner * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        break;
       default:
         ctx.fillRect(left + inner * 0.2, top + inner * 0.2, inner * 0.6, inner * 0.6);
         break;
@@ -370,10 +523,16 @@
       this.game = game;
       this.stageId = opts.stageId || "stationFront";
       this.hazardRank = typeof opts.hazardRank === "number" ? opts.hazardRank : 8;
+      this.mode = opts.mode === "infinity" ? "infinity" : "normal";
+      this.isInfinityMode = this.mode === "infinity";
       this.stageTheme = getStageTheme(this.stageId);
       theme = this.stageTheme;
       this.isTouchUi = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
       this.elapsedSec = 0;
+      this.score = 0;
+      this.scoreRemainder = 0;
+      this.dangerTier = 0;
+      this.stageShiftIndex = 0;
       this.paused = false;
       this.runEnded = false;
       this.endReason = "";
@@ -386,8 +545,10 @@
       this.enemies = [];
       this.pickups = [];
       this.orbitRender = [];
+      this.haloRender = [];
       this.droneRender = [];
       this.beamFx = [];
+      this.weaponFx = [];
       this.pendingLevelUps = 0;
       this.levelUpChoices = null;
       this.levelUpSelected = 0;
@@ -397,11 +558,14 @@
       this.camera = { x: 0, y: 0 };
       this.specialInventory = {};
       this.activeFusions = {};
+      this.activeTrueFusions = {};
       this.specialItemCatalog = getSpecialItemCatalog();
       this.fusionRecipes = getFusionRecipes();
+      this.trueFusionRecipes = getTrueFusionRecipes();
       this.merchantCatalog = getMerchantCatalog();
-      this.skinId = this.game.getSelectedSurvivorSkinId ? this.game.getSelectedSurvivorSkinId() : "poolMonitor";
+      this.skinId = this.game.getSelectedSurvivorSkinId ? this.game.getSelectedSurvivorSkinId() : "classicSenpai";
       this.skinDef = this.game.getSelectedSurvivorSkin ? this.game.getSelectedSurvivorSkin() : null;
+      this.skinStepTimer = 0;
       this.merchant = {
         active: false,
         open: false,
@@ -456,10 +620,21 @@
         droneLevel: 0,
         backstepLevel: 0,
         heatSinkLevel: 0,
+        needleLevel: 0,
+        meteorLevel: 0,
+        haloLevel: 0,
+        swordLevel: 0,
+        axeLevel: 0,
+        wandLevel: 0,
         pulseCooldown: 1.2,
         beamCooldown: 2.0,
         droneCooldown: 0.45,
         afterimageCooldown: 0.2,
+        needleCooldown: 0.2,
+        meteorCooldown: 1.1,
+        swordCooldown: 0.22,
+        axeCooldown: 0.72,
+        wandCooldown: 0.4,
         xpGainMultiplier: 1,
         specialCooldownFactor: 1,
         frenzyTimer: 0,
@@ -473,6 +648,9 @@
       this.updateCamera(1);
       this.game.audio.playTrack("survivor");
       this.pushMessage(translate(this.game, "survivor.title"), 1.3, theme.accent);
+      if (this.isInfinityMode) {
+        this.pushMessage(translate(this.game, "survivor.infinityReady"), 1.4, "#7fe6ff");
+      }
       this.pushMessage(translate(this.game, "survivor.ready"), 1.8, "#f4f0da");
     }
 
@@ -483,6 +661,464 @@
         maxLife: life || 1,
         color: color || "#f4f0da"
       });
+    }
+
+    getSkinFx() {
+      return (this.skinDef && this.skinDef.cosmetics) || null;
+    }
+
+    getSkinShotVisual(kind, fallbackColor) {
+      var fx = this.getSkinFx();
+      var shots = fx && fx.shots ? fx.shots : null;
+      var profile = shots && (shots[kind] || shots.bullet);
+      return {
+        color: (profile && profile.color) || fallbackColor || "#7fe6ff",
+        trailColor: (profile && profile.trailColor) || fallbackColor || "#7fe6ff",
+        accentColor: (profile && profile.accentColor) || "#ffffff",
+        trailRate: profile && typeof profile.trailRate === "number" ? profile.trailRate : 0,
+        shape: (profile && profile.shape) || "square",
+        spin: profile && typeof profile.spin === "number" ? profile.spin : 8,
+        rippleColor: (profile && profile.rippleColor) || fallbackColor || "#7fe6ff",
+        flashColor: (profile && profile.flashColor) || (profile && profile.color) || fallbackColor || "#7fe6ff"
+      };
+    }
+
+    getWeaponVisual(kind) {
+      var baseKey = kind === "wand" ? "pulse" : kind === "axe" ? "backshot" : "crit";
+      var base = this.getSkinShotVisual(baseKey, (this.skinDef && this.skinDef.color) || "#ffe07a");
+      var motif = "classic";
+      if (this.skinId === "poolMonitor") {
+        motif = "water";
+      } else if (this.skinId === "summerFestival") {
+        motif = "spark";
+      } else if (this.skinId === "noonAwakening") {
+        motif = "solar";
+      } else if (this.skinId === "nightPatrol") {
+        motif = "neon";
+      } else if (this.skinId === "ramuneDrive") {
+        motif = "bubble";
+      } else if (this.skinId === "stationMaster") {
+        motif = "brass";
+      } else if (this.skinId === "score81000") {
+        motif = "water";
+      } else if (this.skinId === "score114514") {
+        motif = "solar";
+      } else if (this.skinId === "score162000") {
+        motif = "neon";
+      } else if (this.skinId === "score243000") {
+        motif = "solar";
+      } else if (this.skinId === "score324000") {
+        motif = "spark";
+      } else if (this.skinId === "score405000") {
+        motif = "brass";
+      }
+      return {
+        color: base.color,
+        trailColor: base.trailColor,
+        accentColor: base.accentColor,
+        flashColor: base.flashColor,
+        rippleColor: base.rippleColor,
+        motif: motif
+      };
+    }
+
+    getSkinShowcaseTheme() {
+      var motif = this.getWeaponVisual("wand").motif;
+      var primary = (this.skinDef && (this.skinDef.auraColor || this.skinDef.color)) || "#f6c453";
+      var secondary = (this.skinDef && this.skinDef.color) || primary;
+      var sparkle = "#fff1c4";
+      var panelFill = "rgba(10, 8, 6, 0.94)";
+
+      if (motif === "water") {
+        secondary = "#dffbff";
+        sparkle = "#b9f7ff";
+        panelFill = "rgba(8, 22, 28, 0.94)";
+      } else if (motif === "spark") {
+        secondary = "#ffe0b4";
+        sparkle = "#ffcf9d";
+        panelFill = "rgba(28, 14, 10, 0.94)";
+      } else if (motif === "solar") {
+        secondary = "#fff1c4";
+        sparkle = "#ffffff";
+        panelFill = "rgba(30, 20, 8, 0.94)";
+      } else if (motif === "neon") {
+        secondary = "#d7e5ff";
+        sparkle = "#c7d6ff";
+        panelFill = "rgba(10, 14, 28, 0.94)";
+      } else if (motif === "bubble") {
+        secondary = "#dffef7";
+        sparkle = "#bffff2";
+        panelFill = "rgba(8, 24, 22, 0.94)";
+      } else if (motif === "brass") {
+        secondary = "#f6e8c9";
+        sparkle = "#fff8e8";
+        panelFill = "rgba(24, 16, 10, 0.94)";
+      }
+
+      return {
+        motif: motif,
+        primary: primary,
+        secondary: secondary,
+        sparkle: sparkle,
+        panelFill: panelFill
+      };
+    }
+
+    getSkillVisual(skillId) {
+      var profile;
+      switch (skillId) {
+        case "summerPulse":
+        case "pickupAura":
+        case "haloSigil":
+        case "mysticWand":
+          profile = this.getWeaponVisual("wand");
+          break;
+        case "sunbeam810":
+        case "lucky810":
+        case "meteorCall":
+          profile = this.getWeaponVisual("axe");
+          profile.color = this.getSkinShotVisual("beam", profile.color).color;
+          profile.flashColor = this.getSkinShotVisual("beam", profile.color).flashColor;
+          break;
+        case "summerSword":
+          profile = this.getWeaponVisual("sword");
+          break;
+        case "breakerAxe":
+          profile = this.getWeaponVisual("axe");
+          break;
+        case "afterimageStep":
+        case "backstepVolley":
+        case "quickStep":
+        case "pierceSandal":
+          profile = this.getWeaponVisual("axe");
+          break;
+        case "droneBuddy":
+        case "ramuneOrbit":
+          profile = this.getWeaponVisual("wand");
+          break;
+        case "saltGuard":
+        case "thickNeck":
+          profile = this.getWeaponVisual("sword");
+          profile.color = "#f7efe0";
+          profile.trailColor = "#fff1c4";
+          break;
+        case "coldMugicha":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#9feeff";
+          profile.trailColor = "#dffbff";
+          break;
+        case "heatSink":
+          profile = this.getWeaponVisual("axe");
+          profile.color = "#ffb38a";
+          profile.trailColor = "#ffd9c8";
+          break;
+        case "yarimasuNee":
+          profile = this.getWeaponVisual("sword");
+          break;
+        default:
+          profile = this.getWeaponVisual("wand");
+          profile.color = this.getSkinShotVisual("bullet", profile.color).color;
+          profile.trailColor = this.getSkinShotVisual("bullet", profile.color).trailColor;
+          break;
+      }
+      return profile;
+    }
+
+    spawnSkillSignature(skillId, x, y, options) {
+      var visual = this.getSkillVisual(skillId);
+      var opts = options || {};
+      var power = opts.power || 1;
+      var angle = typeof opts.angle === "number" ? opts.angle : this.player.facingAngle;
+      var ringRadius = opts.radius || (16 + power * 8);
+
+      this.spawnWeaponMotifFx(x, y, visual, power);
+
+      if (skillId === "sunbeam810" || skillId === "meteorCall") {
+        this.effects.spawnRadialStreakBurst(x, y, {
+          count: 7 + Math.floor(power * 2),
+          speedMin: 44,
+          speedMax: 110,
+          life: 0.18,
+          color: visual.flashColor || visual.accentColor,
+          width: 2,
+          length: 14 + power * 4,
+          drag: 0.84
+        });
+      } else if (skillId === "summerPulse" || skillId === "haloSigil" || skillId === "pickupAura") {
+        this.effects.spawnRing(x, y, {
+          color: visual.color,
+          radius: ringRadius,
+          growth: 44 + power * 20,
+          lineWidth: 2 + Math.floor(power),
+          life: 0.18,
+          fillAlpha: 0.07
+        });
+      } else if (skillId === "quickStep" || skillId === "afterimageStep" || skillId === "backstepVolley") {
+        this.effects.spawnStreak(x, y, -Math.cos(angle) * (70 + power * 24), -Math.sin(angle) * (70 + power * 24), {
+          life: 0.18,
+          color: visual.trailColor,
+          width: 3,
+          length: 18 + power * 6,
+          drag: 0.88
+        });
+      } else {
+        this.effects.spawnEcho(x, y, {
+          width: 18 + power * 6,
+          height: 18 + power * 6,
+          life: 0.12,
+          color: visual.color,
+          outlineColor: visual.accentColor,
+          rotation: angle,
+          shape: "orb"
+        });
+      }
+    }
+
+    spawnSkinMovementFx(dt, move, moveMagnitude) {
+      var fx = this.getSkinFx();
+      var step;
+      var directionX;
+      var directionY;
+      var originX;
+      var originY;
+      var rotation;
+
+      if (!fx || !fx.footsteps || moveMagnitude < 54) {
+        return;
+      }
+
+      this.skinStepTimer -= dt;
+      if (this.skinStepTimer > 0) {
+        return;
+      }
+
+      step = fx.footsteps;
+      this.skinStepTimer = step.interval || 0.1;
+      directionX = moveMagnitude > 0 ? this.player.vx / moveMagnitude : move.x || 0;
+      directionY = moveMagnitude > 0 ? this.player.vy / moveMagnitude : move.y || 0;
+      originX = this.player.x - directionX * 12;
+      originY = this.player.y + 18 - directionY * 12;
+      rotation = Math.atan2(directionY, directionX);
+
+      this.effects.spawnParticleBurst(originX, originY, {
+        count: step.count || 2,
+        color: step.color || "#ffffff",
+        speedMin: 6,
+        speedMax: 28,
+        life: 0.22,
+        sizeStart: 3,
+        sizeEnd: 1,
+        shape: step.shape === "circle" ? "circle" : "diamond"
+      });
+
+      if (step.accentColor) {
+        this.effects.spawnParticleBurst(originX, originY, {
+          count: 1,
+          color: step.accentColor,
+          speedMin: 4,
+          speedMax: 18,
+          life: 0.18,
+          sizeStart: 2,
+          sizeEnd: 1,
+          shape: step.shape === "circle" ? "circle" : "diamond"
+        });
+      }
+
+      this.effects.spawnEcho(originX, originY, {
+        width: step.shape === "circle" ? 10 : 18,
+        height: step.shape === "circle" ? 10 : 6,
+        life: 0.16,
+        color: step.color || "#ffffff",
+        outlineColor: step.accentColor || "",
+        rotation: rotation,
+        shape: step.shape === "circle" ? "orb" : "box"
+      });
+      this.effects.spawnStreak(originX, originY, -directionX * 56, -directionY * 56, {
+        life: 0.14,
+        color: step.accentColor || step.color || "#ffffff",
+        width: step.shape === "circle" ? 2 : 3,
+        length: step.shape === "circle" ? 10 : 18
+      });
+
+      if (step.ring) {
+        this.effects.spawnRing(originX, originY, {
+          color: step.color || "#ffffff",
+          radius: 4,
+          growth: 26,
+          lineWidth: 1,
+          life: 0.14,
+          fillAlpha: 0.05
+        });
+      }
+    }
+
+    spawnSkinAttackFx(kind, x, y, visual) {
+      var burstCount;
+      if (kind === "pulse" && Math.random() > 0.34) {
+        return;
+      }
+      burstCount = kind === "pulse" ? 2 : kind === "crit" ? 4 : 3;
+      this.effects.spawnParticleBurst(x, y, {
+        count: burstCount,
+        color: visual.trailColor,
+        speedMin: 18,
+        speedMax: kind === "pulse" ? 58 : 42,
+        life: 0.18,
+        sizeStart: kind === "pulse" ? 4 : 3,
+        sizeEnd: 1,
+        shape: visual.shape === "circle" ? "circle" : "diamond"
+      });
+      this.effects.spawnRadialStreakBurst(x, y, {
+        count: kind === "pulse" ? 10 : kind === "crit" ? 8 : 5,
+        speedMin: kind === "pulse" ? 70 : 44,
+        speedMax: kind === "pulse" ? 140 : 94,
+        life: kind === "pulse" ? 0.24 : 0.18,
+        color: visual.accentColor || visual.trailColor,
+        width: kind === "pulse" ? 3 : 2,
+        length: kind === "pulse" ? 26 : 16,
+        drag: 0.84
+      });
+      this.effects.spawnEcho(x, y, {
+        width: kind === "pulse" ? 18 : 12,
+        height: kind === "pulse" ? 18 : 12,
+        life: kind === "pulse" ? 0.18 : 0.12,
+        color: visual.trailColor,
+        outlineColor: visual.accentColor,
+        shape: "orb"
+      });
+      if (kind !== "pulse") {
+        this.effects.spawnRing(x, y, {
+          color: visual.rippleColor,
+          radius: 5,
+          growth: 24,
+          lineWidth: 1,
+          life: 0.12,
+          fillAlpha: 0.04
+        });
+      }
+      if (kind === "crit") {
+        this.effects.flashScreen(visual.flashColor, 0.025, 0.05);
+      }
+    }
+
+    spawnPlayerShotTrail(shot) {
+      if (shot.kind === "wandbolt") {
+        this.effects.spawnParticleBurst(shot.x, shot.y, {
+          count: 2,
+          color: shot.trailColor || shot.color,
+          speedMin: 5,
+          speedMax: 18,
+          life: 0.14,
+          sizeStart: Math.max(2, shot.radius * 0.5),
+          sizeEnd: 1,
+          shape: "circle"
+        });
+        this.effects.spawnEcho(shot.x, shot.y, {
+          width: shot.radius * 2.2,
+          height: shot.radius * 2.2,
+          life: 0.08,
+          color: shot.color,
+          outlineColor: shot.accentColor || "",
+          shape: "orb"
+        });
+      }
+      this.effects.spawnParticleBurst(shot.x, shot.y, {
+        count: 1,
+        color: shot.trailColor || shot.color,
+        speedMin: 4,
+        speedMax: 14,
+        life: 0.12,
+        sizeStart: Math.max(2, shot.radius * 0.4),
+        sizeEnd: 1,
+        shape: shot.shape === "circle" ? "circle" : "diamond"
+      });
+      this.effects.spawnStreak(shot.x, shot.y, -shot.vx * 0.06, -shot.vy * 0.06, {
+        life: 0.12,
+        color: shot.trailColor || shot.color,
+        width: shot.shape === "circle" ? 2 : 3,
+        length: shot.shape === "circle" ? 12 : 18,
+        drag: 0.9
+      });
+      if (shot.shape === "circle" && Math.random() < 0.3) {
+        this.effects.spawnEcho(shot.x, shot.y, {
+          width: shot.radius * 1.8,
+          height: shot.radius * 1.8,
+          life: 0.08,
+          color: shot.color,
+          outlineColor: shot.accentColor || "",
+          shape: "orb"
+        });
+      }
+    }
+
+    drawPlayerProjectile(ctx, shot, screenX, screenY) {
+      var glowRadius = shot.radius + 5;
+      ctx.save();
+      ctx.translate(screenX, screenY);
+      ctx.rotate((shot.age || 0) * (shot.spin || 8));
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = shot.trailColor || shot.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = shot.color;
+
+      if (shot.kind === "wandbolt") {
+        ctx.beginPath();
+        ctx.arc(0, 0, shot.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = shot.accentColor || "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -shot.radius - 3);
+        ctx.lineTo(0, shot.radius + 3);
+        ctx.moveTo(-shot.radius - 3, 0);
+        ctx.lineTo(shot.radius + 3, 0);
+        ctx.stroke();
+      } else if (shot.kind === "needle") {
+        ctx.fillRect(-shot.radius - 2, -shot.radius * 0.22, shot.radius * 2 + 4, shot.radius * 0.44);
+        ctx.fillStyle = shot.accentColor || "#fff1c4";
+        ctx.beginPath();
+        ctx.moveTo(shot.radius + 4, 0);
+        ctx.lineTo(shot.radius - 1, -shot.radius * 0.46);
+        ctx.lineTo(shot.radius - 1, shot.radius * 0.46);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shot.shape === "circle") {
+        ctx.beginPath();
+        ctx.arc(0, 0, shot.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (shot.shape === "ticket") {
+        ctx.fillRect(-shot.radius - 1, -shot.radius * 0.7, shot.radius * 2 + 2, shot.radius * 1.4);
+        ctx.fillStyle = shot.accentColor || "#fff1c4";
+        ctx.fillRect(-shot.radius * 0.28, -shot.radius * 0.66, 2, shot.radius * 1.32);
+        ctx.fillRect(shot.radius * 0.08, -shot.radius * 0.66, 2, shot.radius * 1.32);
+      } else {
+        ctx.fillRect(-shot.radius, -shot.radius, shot.radius * 2, shot.radius * 2);
+        ctx.fillStyle = shot.accentColor || "#fff1c4";
+        ctx.fillRect(-shot.radius * 0.3, -shot.radius * 0.3, shot.radius * 0.6, shot.radius * 0.6);
+      }
+
+      if (shot.accentColor) {
+        ctx.strokeStyle = shot.accentColor;
+        ctx.lineWidth = 2;
+        if (shot.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.max(2, shot.radius - 1), 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(-shot.radius - 1, -shot.radius - 1, shot.radius * 2 + 2, shot.radius * 2 + 2);
+        }
+      }
+      if (shot.shape !== "circle") {
+        ctx.rotate(Math.PI * 0.25);
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = shot.trailColor || shot.color;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-shot.radius * 0.6, -shot.radius * 0.6, shot.radius * 1.2, shot.radius * 1.2);
+      }
+      ctx.restore();
     }
 
     getActionButtons() {
@@ -504,6 +1140,333 @@
         });
       }
       return buttons;
+    }
+
+    getModeLabel() {
+      return this.game.modeName ? this.game.modeName(this.mode) : this.mode.toUpperCase();
+    }
+
+    getLiveStageTheme() {
+      var base = getStageTheme(this.stageId);
+      var shift = getStageShiftIndex(this.elapsedSec);
+      if (shift <= 0) {
+        return base;
+      }
+      if (shift === 1) {
+        return {
+          label: base.label,
+          bg: mixColor(base.bg, "#3b1c0d", 0.34),
+          tileA: mixColor(base.tileA, "#50301a", 0.3),
+          tileB: mixColor(base.tileB, "#64381d", 0.3),
+          accent: mixColor(base.accent, "#ffd37a", 0.35),
+          lane: mixColor(base.lane, "#9d6137", 0.3),
+          prop: mixColor(base.prop, "#b06c48", 0.26),
+          glow: mixColor(base.glow, "#fff0ba", 0.28)
+        };
+      }
+      if (shift === 2) {
+        return {
+          label: base.label,
+          bg: mixColor(base.bg, "#121824", 0.52),
+          tileA: mixColor(base.tileA, "#1f2c40", 0.48),
+          tileB: mixColor(base.tileB, "#27344a", 0.48),
+          accent: mixColor(base.accent, "#8db4ff", 0.5),
+          lane: mixColor(base.lane, "#6176b8", 0.5),
+          prop: mixColor(base.prop, "#48618f", 0.44),
+          glow: mixColor(base.glow, "#d7e5ff", 0.5)
+        };
+      }
+      return {
+        label: base.label,
+        bg: mixColor(base.bg, "#2a0818", 0.58),
+        tileA: mixColor(base.tileA, "#411126", 0.54),
+        tileB: mixColor(base.tileB, "#561833", 0.54),
+        accent: mixColor(base.accent, "#ff8de0", 0.62),
+        lane: mixColor(base.lane, "#a24f86", 0.56),
+        prop: mixColor(base.prop, "#c86ba3", 0.52),
+        glow: mixColor(base.glow, "#ffe2f5", 0.56)
+      };
+    }
+
+    getSpawnerElapsedSec() {
+      if (!this.isInfinityMode || this.elapsedSec <= RUN_LENGTH_SEC) {
+        return this.elapsedSec;
+      }
+      return ENDLESS_LOOP_START_SEC + ((this.elapsedSec - ENDLESS_LOOP_START_SEC) % ENDLESS_LOOP_RANGE_SEC);
+    }
+
+    getSpawnIntensity() {
+      return Math.floor(this.score / 12000);
+    }
+
+    getDangerTier() {
+      return this.dangerTier;
+    }
+
+    getNextScoreSkinUnlock() {
+      return this.game.getNextScoreSkinUnlock ? this.game.getNextScoreSkinUnlock(this.score) : null;
+    }
+
+    applyScoreScalingToEnemy(enemy) {
+      var tier = this.getSpawnIntensity();
+      var hpScale;
+      var speedScale;
+      var damageScale;
+      if (!enemy || tier <= 0) {
+        return enemy;
+      }
+      hpScale = 1 + Math.min(3.6, tier * 0.07);
+      speedScale = 1 + Math.min(0.9, tier * 0.018);
+      damageScale = 1 + Math.min(2.6, tier * 0.05);
+      enemy.maxHp = Math.max(enemy.hp, Math.round(enemy.maxHp * hpScale));
+      enemy.hp = Math.max(1, Math.round(enemy.hp * hpScale));
+      enemy.speed *= speedScale;
+      enemy.baseSpeed = enemy.speed;
+      enemy.damage = Math.max(1, Math.round(enemy.damage * damageScale));
+      enemy.baseDamage = enemy.damage;
+      enemy.xp = Math.max(1, Math.round(enemy.xp * (1 + Math.min(1.8, tier * 0.03))));
+      enemy.scoreTier = tier;
+      return enemy;
+    }
+
+    getDangerWaveEnemyIds() {
+      var archetypes = this.plan && this.plan.enemyArchetypes ? this.plan.enemyArchetypes : null;
+      var ids = [];
+      var id;
+      if (!archetypes) {
+        return ids;
+      }
+      for (id in archetypes) {
+        if (!Object.prototype.hasOwnProperty.call(archetypes, id)) {
+          continue;
+        }
+        if (archetypes[id].category === "elite") {
+          ids.push(id);
+        }
+      }
+      return ids;
+    }
+
+    spawnDangerWave(tier) {
+      var eliteIds = this.getDangerWaveEnemyIds();
+      var spawnCount;
+      var i;
+      if (!eliteIds.length) {
+        return;
+      }
+      spawnCount = Math.min(3, 1 + Math.floor(tier / 4));
+      for (i = 0; i < spawnCount; i += 1) {
+        var enemyId = eliteIds[(tier + i) % eliteIds.length];
+        var spawn = this.spawner.getPatternSpawn("front-arc", this.player, i, spawnCount, this.getViewRect());
+        var enemy = this.spawner.createEnemy(enemyId, spawn, this.elapsedSec, {
+          isDangerWave: true
+        });
+        if (enemy) {
+          this.applyScoreScalingToEnemy(enemy);
+          this.enemies.push(enemy);
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#ff8a70",
+            radius: 24,
+            growth: 110,
+            lineWidth: 5,
+            life: 0.46
+          });
+        }
+      }
+    }
+
+    handleScoreMilestones(previousScore, nextScore) {
+      var previousTier = Math.floor(Math.max(0, previousScore || 0) / 12000);
+      var nextTier = Math.floor(Math.max(0, nextScore || 0) / 12000);
+      var unlockedSkins;
+      var i;
+
+      if (nextTier > previousTier) {
+        for (i = previousTier + 1; i <= nextTier; i += 1) {
+          this.dangerTier = i;
+          this.pushMessage(translate(this.game, "survivor.dangerTier", { tier: i }), 1.4, "#ff9c4b");
+          this.effects.flashScreen("#ff9c4b", 0.06, 0.11);
+          this.effects.triggerShake(5 + Math.min(7, i), 0.14);
+          if (this.isInfinityMode) {
+            this.spawnDangerWave(i);
+          }
+        }
+      }
+
+      unlockedSkins = this.game.unlockScoreSkins ? this.game.unlockScoreSkins(nextScore) : [];
+      for (i = 0; i < unlockedSkins.length; i += 1) {
+        var skin = unlockedSkins[i];
+        var skinName = getMetaText(this.game, skin, "name");
+        if (this.game.audio && this.game.audio.playPickupCue) {
+          this.game.audio.playPickupCue("chest");
+        }
+        this.pushMessage(
+          translate(
+            this.game,
+            skin.scoreThreshold === SPECIAL_SCORE_STEP ? "survivor.specialScoreUnlocked" : "survivor.scoreUnlocked",
+            { skin: skinName }
+          ),
+          2.1,
+          skin.color || "#ffe07a"
+        );
+        this.effects.flashScreen(skin.auraColor || skin.color || "#ffe07a", 0.08, 0.14);
+      }
+    }
+
+    addScore(amount, x, y, options) {
+      var gained = Math.max(0, Math.round(amount || 0));
+      var opts = options || {};
+      var previousScore = this.score;
+      if (gained <= 0) {
+        return 0;
+      }
+      this.score += gained;
+      if (!opts.silent && (gained >= 80 || opts.forceText)) {
+        this.effects.spawnFloatingText("+" + formatScore(gained) + " " + translate(this.game, "common.score"), x, y, {
+          color: opts.color || "#ffe07a",
+          size: opts.size || 16,
+          life: 0.55
+        });
+      }
+      this.handleScoreMilestones(previousScore, this.score);
+      return gained;
+    }
+
+    triggerLegendChestShow() {
+      this.effects.spawnChestOpen(this.player.x, this.player.y - 10);
+      this.effects.spawnRing(this.player.x, this.player.y - 10, {
+        color: "#fff1c4",
+        radius: 22,
+        growth: 180,
+        lineWidth: 5,
+        life: 0.42,
+        fillAlpha: 0.08
+      });
+      this.effects.spawnRing(this.player.x, this.player.y - 10, {
+        color: "#ffe07a",
+        radius: 14,
+        growth: 116,
+        lineWidth: 4,
+        life: 0.34,
+        fillAlpha: 0.1
+      });
+      this.effects.spawnRadialStreakBurst(this.player.x, this.player.y - 10, {
+        count: 16,
+        speedMin: 42,
+        speedMax: 140,
+        life: 0.34,
+        color: "#fff1c4",
+        width: 3,
+        length: 28,
+        drag: 0.84
+      });
+      this.effects.flashScreen("#fff1c4", 0.12, 0.2);
+      this.effects.triggerShake(10, 0.24);
+      if (this.game.audio && this.game.audio.playPickupCue) {
+        this.game.audio.playPickupCue("legendChest");
+      }
+    }
+
+    triggerSkinChestShow() {
+      var theme = this.getSkinShowcaseTheme();
+      var x = this.player.x;
+      var y = this.player.y - 10;
+
+      if (this.skinId === "score114514") {
+        this.triggerLegendChestShow();
+        return;
+      }
+
+      this.effects.spawnChestOpen(x, y);
+      this.effects.spawnRing(x, y, {
+        color: theme.primary,
+        radius: 18,
+        growth: 136,
+        lineWidth: 4,
+        life: 0.28,
+        fillAlpha: 0.06
+      });
+      this.effects.spawnRing(x, y, {
+        color: theme.secondary,
+        radius: 12,
+        growth: 92,
+        lineWidth: 3,
+        life: 0.22,
+        fillAlpha: 0.08
+      });
+      this.effects.spawnRadialStreakBurst(x, y, {
+        count: theme.motif === "solar" ? 14 : theme.motif === "spark" ? 12 : 10,
+        speedMin: 42,
+        speedMax: theme.motif === "solar" ? 132 : 110,
+        life: 0.24,
+        color: theme.sparkle,
+        width: theme.motif === "solar" ? 3 : 2,
+        length: theme.motif === "spark" ? 22 : 18,
+        drag: 0.86
+      });
+
+      if (theme.motif === "water" || theme.motif === "bubble") {
+        this.effects.spawnParticleBurst(x, y, {
+          count: theme.motif === "bubble" ? 16 : 12,
+          color: theme.secondary,
+          speedMin: 18,
+          speedMax: 74,
+          life: 0.4,
+          sizeStart: 6,
+          sizeEnd: 1,
+          shape: "circle"
+        });
+      } else if (theme.motif === "spark") {
+        this.effects.spawnParticleBurst(x, y, {
+          count: 18,
+          color: theme.primary,
+          speedMin: 28,
+          speedMax: 120,
+          life: 0.34,
+          sizeStart: 5,
+          sizeEnd: 1,
+          shape: "diamond"
+        });
+      } else if (theme.motif === "neon") {
+        this.effects.spawnRadialStreakBurst(x, y, {
+          count: 14,
+          speedMin: 56,
+          speedMax: 144,
+          life: 0.28,
+          color: theme.primary,
+          width: 3,
+          length: 26,
+          drag: 0.84
+        });
+      } else if (theme.motif === "brass") {
+        this.effects.spawnParticleBurst(x, y, {
+          count: 14,
+          color: theme.primary,
+          speedMin: 18,
+          speedMax: 86,
+          life: 0.34,
+          sizeStart: 4,
+          sizeEnd: 1,
+          shape: "diamond"
+        });
+      } else {
+        this.effects.spawnParticleBurst(x, y, {
+          count: 14,
+          color: theme.sparkle,
+          speedMin: 22,
+          speedMax: 92,
+          life: 0.36,
+          sizeStart: 5,
+          sizeEnd: 1,
+          shape: "circle"
+        });
+      }
+
+      this.effects.flashScreen(theme.primary, 0.08, 0.16);
+      this.effects.triggerShake(theme.motif === "solar" ? 9 : 6, 0.18);
+      if (this.game.audio && this.game.audio.playPickupCue) {
+        this.game.audio.playPickupCue("chest");
+      }
     }
 
     getUpgradeLevel(upgradeId) {
@@ -673,6 +1636,49 @@
         this.firePulseBurst();
         this.fireSunbeam();
       }
+      this.tryTrueFusions();
+    }
+
+    applyTrueFusionResult(recipeId) {
+      var recipe = findTrueFusionRecipeById(recipeId);
+      if (!recipe || this.activeTrueFusions[recipeId]) {
+        return;
+      }
+      this.activeTrueFusions[recipeId] = true;
+      this.rememberRecipe(recipeId);
+      this.refreshBuildStats(true);
+      this.effects.flashScreen(recipe.color || "#fff1c4", 0.18, 0.28);
+      this.effects.triggerShake(12, 0.32);
+      this.effects.spawnBossWarning(getMetaText(this.game, recipe, "name"));
+      this.pushMessage(getMetaText(this.game, recipe, "name"), 1.8, recipe.color || "#fff1c4");
+
+      if (recipeId === "solarMyth") {
+        this.player.frenzyTimer = Math.max(this.player.frenzyTimer, 24);
+        this.fireBasicVolley();
+        this.fireSummerSword();
+        this.fireBreakerAxe();
+        this.fireSunbeam();
+      } else if (recipeId === "tidalSanctuary") {
+        this.healPlayer(this.player.maxHp);
+        this.player.shieldTimer = Math.max(this.player.shieldTimer, 28);
+        this.player.loveAuraTimer = Math.max(this.player.loveAuraTimer, 28);
+        this.player.loveAuraPulse = 0.1;
+        this.vacuumXpPickups();
+        this.triggerIkuikuPulse();
+      }
+    }
+
+    tryTrueFusions() {
+      var i;
+      for (i = 0; i < this.trueFusionRecipes.length; i += 1) {
+        var recipe = this.trueFusionRecipes[i];
+        if (this.activeTrueFusions[recipe.id]) {
+          continue;
+        }
+        if (this.activeFusions[recipe.ingredients[0]] && this.activeFusions[recipe.ingredients[1]]) {
+          this.applyTrueFusionResult(recipe.id);
+        }
+      }
     }
 
     tryFuseSpecialItems() {
@@ -818,21 +1824,29 @@
       var droneLevel = this.getUpgradeLevel("droneBuddy");
       var backstepLevel = this.getUpgradeLevel("backstepVolley");
       var heatSinkLevel = this.getUpgradeLevel("heatSink");
+      var needleLevel = this.getUpgradeLevel("neonNeedle");
+      var meteorLevel = this.getUpgradeLevel("meteorCall");
+      var haloLevel = this.getUpgradeLevel("haloSigil");
+      var swordLevel = this.getUpgradeLevel("summerSword");
+      var axeLevel = this.getUpgradeLevel("breakerAxe");
+      var wandLevel = this.getUpgradeLevel("mysticWand");
       var fusionBurst = !!this.activeFusions.burstVacation;
       var fusionGentle = !!this.activeFusions.gentleWave;
       var fusionNova = !!this.activeFusions.vacuumNova;
       var fusionDrive = !!this.activeFusions.summerOverdrive;
+      var trueSolar = !!this.activeTrueFusions.solarMyth;
+      var trueTide = !!this.activeTrueFusions.tidalSanctuary;
 
-      this.player.maxHp = 120 + neckLevel * 16 + (fusionGentle ? 30 : 0);
-      this.player.speed = 260 + speedLevel * 20 + (fusionDrive ? 22 : 0);
-      this.player.fireRate = Math.max(0.12, 0.36 - fireLevel * 0.03 - (fusionBurst ? 0.04 : 0));
-      this.player.damage = 32 + damageLevel * 9 + heatSinkLevel * 2 + (fusionBurst ? 14 : 0) + (fusionDrive ? 10 : 0);
-      this.player.pickupRange = 96 + magnetLevel * 26 + (fusionNova ? 60 : 0) + (fusionGentle ? 30 : 0);
-      this.player.armor = neckLevel * 1.4 + shellLevel * 0.5 + (fusionGentle ? 2.5 : 0);
+      this.player.maxHp = 120 + neckLevel * 16 + (fusionGentle ? 30 : 0) + (trueTide ? 54 : 0);
+      this.player.speed = 260 + speedLevel * 20 + (fusionDrive ? 22 : 0) + (trueSolar ? 26 : 0);
+      this.player.fireRate = Math.max(0.1, 0.36 - fireLevel * 0.03 - (fusionBurst ? 0.04 : 0) - (trueSolar ? 0.05 : 0));
+      this.player.damage = 32 + damageLevel * 9 + heatSinkLevel * 2 + (fusionBurst ? 14 : 0) + (fusionDrive ? 10 : 0) + (trueSolar ? 20 : 0);
+      this.player.pickupRange = 96 + magnetLevel * 26 + (fusionNova ? 60 : 0) + (fusionGentle ? 30 : 0) + (trueTide ? 80 : 0);
+      this.player.armor = neckLevel * 1.4 + shellLevel * 0.5 + (fusionGentle ? 2.5 : 0) + (trueTide ? 3.5 : 0);
       this.player.pierce = pierceLevel + Math.floor(heatSinkLevel / 2);
       this.player.orbitLevel = orbitLevel;
       this.player.pulseLevel = pulseLevel;
-      this.player.beamLevel = beamLevel;
+      this.player.beamLevel = beamLevel + (trueSolar ? 1 : 0);
       this.player.hypeLevel = hypeLevel;
       this.player.afterimageLevel = afterimageLevel;
       this.player.shellLevel = shellLevel;
@@ -840,10 +1854,16 @@
       this.player.droneLevel = droneLevel;
       this.player.backstepLevel = backstepLevel;
       this.player.heatSinkLevel = heatSinkLevel;
-      this.player.shotCount = 1 + Math.floor(hypeLevel / 2) + Math.floor(backstepLevel / 3);
-      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + (fusionDrive ? 120 : 0);
+      this.player.needleLevel = needleLevel;
+      this.player.meteorLevel = meteorLevel;
+      this.player.haloLevel = haloLevel;
+      this.player.swordLevel = swordLevel + (trueSolar ? 1 : 0);
+      this.player.axeLevel = axeLevel + (trueSolar ? 1 : 0);
+      this.player.wandLevel = wandLevel + (trueSolar ? 1 : 0);
+      this.player.shotCount = 1 + Math.floor(hypeLevel / 2) + Math.floor(backstepLevel / 3) + (trueSolar ? 1 : 0);
+      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + (fusionDrive ? 120 : 0) + (trueSolar ? 140 : 0);
       this.player.xpGainMultiplier = 1 + luckLevel * 0.08 + (fusionBurst ? 0.12 : 0);
-      this.player.specialCooldownFactor = Math.max(0.5, 1 - heatSinkLevel * 0.08 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0));
+      this.player.specialCooldownFactor = Math.max(0.42, 1 - heatSinkLevel * 0.08 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0) - (trueSolar ? 0.08 : 0) - (trueTide ? 0.05 : 0));
 
       if (healOnGrow) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + 22);
@@ -871,6 +1891,24 @@
       for (i = 1; i < this.enemies.length; i += 1) {
         var candidate = this.enemies[i];
         var candidateDistance = distanceSquared(this.player, candidate);
+        if (candidateDistance < nearestDistance) {
+          nearest = candidate;
+          nearestDistance = candidateDistance;
+        }
+      }
+      return nearest;
+    }
+
+    getNearestEnemyFrom(x, y) {
+      if (!this.enemies.length) {
+        return null;
+      }
+      var nearest = this.enemies[0];
+      var nearestDistance = distanceSquared({ x: x, y: y }, nearest);
+      var i;
+      for (i = 1; i < this.enemies.length; i += 1) {
+        var candidate = this.enemies[i];
+        var candidateDistance = distanceSquared({ x: x, y: y }, candidate);
         if (candidateDistance < nearestDistance) {
           nearest = candidate;
           nearestDistance = candidateDistance;
@@ -942,18 +1980,32 @@
 
     createPlayerShot(direction, options) {
       var opts = options || {};
+      var originX = typeof opts.originX === "number" ? opts.originX : this.player.x;
+      var originY = typeof opts.originY === "number" ? opts.originY : this.player.y;
+      var visual = this.getSkinShotVisual(opts.skinKind || opts.kind || "bullet", opts.color || "#7fe6ff");
       this.projectiles.push({
-        x: typeof opts.originX === "number" ? opts.originX : this.player.x,
-        y: typeof opts.originY === "number" ? opts.originY : this.player.y,
+        x: originX,
+        y: originY,
         vx: direction.x * (opts.speed || this.player.bulletSpeed),
         vy: direction.y * (opts.speed || this.player.bulletSpeed),
         radius: opts.radius || 6,
         life: opts.life || 1.3,
         damage: opts.damage || this.player.damage,
-        color: opts.color || "#7fe6ff",
+        color: opts.color || visual.color,
         pierce: typeof opts.pierce === "number" ? opts.pierce : this.player.pierce,
-        kind: opts.kind || "bullet"
+        kind: opts.kind || "bullet",
+        trailRate: typeof opts.trailRate === "number" ? opts.trailRate : visual.trailRate,
+        trailTimer: typeof opts.trailRate === "number" ? opts.trailRate : visual.trailRate,
+        trailColor: opts.trailColor || visual.trailColor,
+        accentColor: opts.accentColor || visual.accentColor,
+        shape: opts.shape || visual.shape,
+        spin: typeof opts.spin === "number" ? opts.spin : visual.spin,
+        age: 0,
+        homing: opts.homing || 0,
+        turnRate: opts.turnRate || 0,
+        weaponKind: opts.weaponKind || ""
       });
+      this.spawnSkinAttackFx(opts.skinKind || opts.kind || "bullet", originX, originY, visual);
     }
 
     createEnemyShot(enemy, direction, options) {
@@ -1053,6 +2105,49 @@
             shape: "diamond"
           });
           break;
+        case "toast":
+          this.effects.spawnRing(shot.x, shot.y, {
+            color: "#ff9dc9",
+            radius: 4,
+            growth: 16,
+            lineWidth: 1,
+            life: 0.12,
+            fillAlpha: 0.06
+          });
+          break;
+        case "anvil":
+          this.effects.spawnParticleBurst(shot.x, shot.y, {
+            count: 2,
+            color: "#d5dde7",
+            speedMin: 8,
+            speedMax: 22,
+            life: 0.14,
+            sizeStart: 2,
+            sizeEnd: 1,
+            shape: "diamond"
+          });
+          break;
+        case "spore":
+          this.effects.spawnParticleBurst(shot.x, shot.y, {
+            count: 2,
+            color: "#f0a7a7",
+            speedMin: 5,
+            speedMax: 18,
+            life: 0.12,
+            sizeStart: 2,
+            sizeEnd: 1,
+            shape: "circle"
+          });
+          break;
+        case "relic":
+          this.effects.spawnStreak(shot.x, shot.y, -shot.vx * 0.07, -shot.vy * 0.07, {
+            life: 0.12,
+            color: "#d9d1ff",
+            width: 2,
+            length: 14,
+            drag: 0.9
+          });
+          break;
         default:
           break;
       }
@@ -1148,6 +2243,51 @@
           ctx.fillStyle = "#f1e2ff";
           ctx.fillRect(-shot.radius * 0.35, -shot.radius * 0.35, shot.radius * 0.7, shot.radius * 0.7);
           break;
+        case "toast":
+          ctx.fillStyle = shot.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -shot.radius);
+          ctx.bezierCurveTo(shot.radius * 0.8, -shot.radius * 0.4, shot.radius * 0.7, shot.radius * 0.8, 0, shot.radius);
+          ctx.bezierCurveTo(-shot.radius * 0.7, shot.radius * 0.8, -shot.radius * 0.8, -shot.radius * 0.4, 0, -shot.radius);
+          ctx.fill();
+          ctx.fillStyle = "#fff1f5";
+          ctx.beginPath();
+          ctx.arc(-shot.radius * 0.16, -shot.radius * 0.1, shot.radius * 0.18, 0, Math.PI * 2);
+          ctx.arc(shot.radius * 0.18, shot.radius * 0.06, shot.radius * 0.13, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        case "anvil":
+          ctx.rotate(rotation + Math.PI * 0.18);
+          ctx.fillStyle = shot.color;
+          ctx.fillRect(-shot.radius, -shot.radius * 0.7, shot.radius * 2, shot.radius * 1.4);
+          ctx.fillRect(-shot.radius * 0.52, -shot.radius, shot.radius * 1.04, shot.radius * 0.34);
+          ctx.fillStyle = "#f8fbff";
+          ctx.fillRect(-shot.radius * 0.22, -shot.radius * 0.34, shot.radius * 0.44, shot.radius * 0.2);
+          break;
+        case "spore":
+          ctx.fillStyle = shot.color;
+          ctx.beginPath();
+          ctx.arc(0, 0, shot.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffd7d7";
+          ctx.beginPath();
+          ctx.arc(-shot.radius * 0.24, -shot.radius * 0.12, shot.radius * 0.2, 0, Math.PI * 2);
+          ctx.arc(shot.radius * 0.18, shot.radius * 0.18, shot.radius * 0.14, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        case "relic":
+          ctx.rotate(rotation + Math.PI * 0.25);
+          ctx.fillStyle = shot.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -shot.radius);
+          ctx.lineTo(shot.radius * 0.44, 0);
+          ctx.lineTo(0, shot.radius);
+          ctx.lineTo(-shot.radius * 0.44, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#fff1c4";
+          ctx.fillRect(-1, -shot.radius * 0.6, 2, shot.radius * 1.2);
+          break;
         default:
           ctx.fillStyle = shot.color;
           ctx.beginPath();
@@ -1157,6 +2297,114 @@
       }
 
       ctx.restore();
+    }
+
+    drawWeaponFx(ctx, shake) {
+      var i;
+      for (i = 0; i < this.weaponFx.length; i += 1) {
+        var fx = this.weaponFx[i];
+        var center = this.worldToScreen(fx.x, fx.y, shake);
+        var lifeRatio = fx.maxLife > 0 ? fx.life / fx.maxLife : 0;
+        var radius = fx.reach * (fx.kind === "wandCast" ? 0.34 : 0.72);
+        var startAngle = fx.angle - fx.arc * 0.5;
+        var endAngle = fx.angle + fx.arc * 0.5;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, lifeRatio));
+
+        if (fx.kind === "slash") {
+          ctx.strokeStyle = fx.color;
+          ctx.lineWidth = fx.width * lifeRatio;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius, startAngle, endAngle);
+          ctx.stroke();
+          ctx.strokeStyle = fx.accentColor || "#ffffff";
+          ctx.lineWidth = Math.max(2, fx.width * 0.32 * lifeRatio);
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius - fx.width * 0.2, startAngle + 0.04, endAngle - 0.04);
+          ctx.stroke();
+        } else if (fx.kind === "axe") {
+          ctx.strokeStyle = fx.color;
+          ctx.lineWidth = fx.width * lifeRatio;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius, startAngle, endAngle);
+          ctx.stroke();
+          var tipX = center.x + Math.cos(fx.angle) * radius;
+          var tipY = center.y + Math.sin(fx.angle) * radius;
+          ctx.fillStyle = fx.accentColor || "#fff1c4";
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY);
+          ctx.lineTo(tipX + Math.cos(fx.angle - 0.9) * 22, tipY + Math.sin(fx.angle - 0.9) * 22);
+          ctx.lineTo(tipX + Math.cos(fx.angle + 0.3) * 12, tipY + Math.sin(fx.angle + 0.3) * 12);
+          ctx.lineTo(tipX + Math.cos(fx.angle + 0.9) * 24, tipY + Math.sin(fx.angle + 0.9) * 24);
+          ctx.closePath();
+          ctx.fill();
+        } else if (fx.kind === "wandCast") {
+          ctx.strokeStyle = fx.color;
+          ctx.lineWidth = Math.max(2, fx.width * 0.2 * lifeRatio);
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, 18 + fx.age * 30, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = fx.accentColor || "#fff1c4";
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, 8 + fx.age * 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.translate(center.x, center.y);
+          ctx.rotate(fx.angle + fx.age * 3);
+          ctx.strokeStyle = fx.trailColor || fx.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -22);
+          ctx.lineTo(0, 22);
+          ctx.moveTo(-22, 0);
+          ctx.lineTo(22, 0);
+          ctx.stroke();
+        } else if (fx.kind === "meteor") {
+          var cometY = center.y - 120 + (1 - lifeRatio) * 120;
+          ctx.strokeStyle = fx.trailColor || fx.color;
+          ctx.lineWidth = Math.max(3, fx.width * 0.3);
+          ctx.beginPath();
+          ctx.moveTo(center.x - 18, cometY - 34);
+          ctx.lineTo(center.x, cometY);
+          ctx.stroke();
+          ctx.fillStyle = fx.color;
+          ctx.beginPath();
+          ctx.arc(center.x, cometY, 10 + (1 - lifeRatio) * 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = fx.accentColor || "#fff1c4";
+          ctx.beginPath();
+          ctx.arc(center.x, cometY, 4 + (1 - lifeRatio) * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (fx.motif === "water" || fx.motif === "bubble") {
+          ctx.fillStyle = fx.trailColor;
+          ctx.beginPath();
+          ctx.arc(center.x + Math.cos(fx.angle) * (radius * 0.7), center.y + Math.sin(fx.angle) * (radius * 0.7), 5 * lifeRatio + 1, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (fx.motif === "spark" || fx.motif === "brass") {
+          ctx.strokeStyle = fx.accentColor || "#fff1c4";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(center.x + Math.cos(startAngle) * radius, center.y + Math.sin(startAngle) * radius);
+          ctx.lineTo(center.x + Math.cos(startAngle) * (radius + 16), center.y + Math.sin(startAngle) * (radius + 16));
+          ctx.moveTo(center.x + Math.cos(endAngle) * radius, center.y + Math.sin(endAngle) * radius);
+          ctx.lineTo(center.x + Math.cos(endAngle) * (radius + 16), center.y + Math.sin(endAngle) * (radius + 16));
+          ctx.stroke();
+        } else if (fx.motif === "solar") {
+          ctx.strokeStyle = fx.accentColor || "#ffffff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius + 10, startAngle, endAngle);
+          ctx.stroke();
+        } else if (fx.motif === "neon") {
+          ctx.strokeStyle = fx.trailColor || fx.color;
+          ctx.globalAlpha = 0.45 * lifeRatio;
+          ctx.beginPath();
+          ctx.arc(center.x + 8, center.y - 6, radius, startAngle, endAngle);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
     }
 
     drawPickupSprite(ctx, pickup, screenX, screenY) {
@@ -1264,6 +2512,7 @@
       var i;
       var originX;
       var originY;
+      var visual;
 
       if (level <= 0) {
         return;
@@ -1273,6 +2522,7 @@
       count = 1 + Math.floor((level + 1) / 2);
       originX = this.player.x + Math.cos(burstAngle) * (20 + level * 4);
       originY = this.player.y + Math.sin(burstAngle) * (20 + level * 4);
+      visual = this.getSkillVisual("afterimageStep");
 
       for (i = 0; i < count; i += 1) {
         var spread = count > 1 ? (i - (count - 1) / 2) * 0.22 : 0;
@@ -1286,19 +2536,543 @@
           radius: 5,
           life: 1.02,
           damage: Math.round(this.player.damage * (0.42 + level * 0.08)),
-          color: "#9ee4ff",
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
           kind: "afterimage"
         });
       }
 
       this.effects.spawnRing(originX, originY, {
-        color: "#9ee4ff",
+        color: visual.color,
         radius: 8 + level * 3,
         growth: 72 + level * 22,
         lineWidth: 2,
         life: 0.24,
         fillAlpha: 0.07
       });
+      this.spawnSkillSignature("afterimageStep", originX, originY, {
+        power: 0.8 + level * 0.2,
+        angle: burstAngle,
+        radius: 12 + level * 3
+      });
+    }
+
+    pushWeaponFx(effect) {
+      var fx = Object.assign({}, effect || {});
+      fx.life = fx.life || 0.18;
+      fx.maxLife = fx.maxLife || fx.life;
+      this.weaponFx.push(fx);
+      if (this.weaponFx.length > 28) {
+        this.weaponFx.shift();
+      }
+    }
+
+    spawnWeaponMotifFx(x, y, visual, scale) {
+      var amount = scale || 1;
+      if (visual.motif === "water" || visual.motif === "bubble") {
+        this.effects.spawnParticleBurst(x, y, {
+          count: 3 + Math.floor(amount),
+          color: visual.trailColor,
+          speedMin: 12,
+          speedMax: 40,
+          life: 0.18,
+          sizeStart: 3,
+          sizeEnd: 1,
+          shape: "circle"
+        });
+      } else if (visual.motif === "spark" || visual.motif === "brass") {
+        this.effects.spawnRadialStreakBurst(x, y, {
+          count: 6 + Math.floor(amount * 2),
+          speedMin: 36,
+          speedMax: 92,
+          life: 0.18,
+          color: visual.accentColor,
+          width: 2,
+          length: 12 + amount * 4,
+          drag: 0.86
+        });
+      } else if (visual.motif === "solar") {
+        this.effects.spawnRing(x, y, {
+          color: visual.flashColor,
+          radius: 8,
+          growth: 56 + amount * 18,
+          lineWidth: 2,
+          life: 0.18,
+          fillAlpha: 0.08
+        });
+      } else if (visual.motif === "neon") {
+        this.effects.spawnEcho(x, y, {
+          width: 22 + amount * 6,
+          height: 10 + amount * 2,
+          life: 0.12,
+          color: visual.color,
+          outlineColor: visual.accentColor,
+          rotation: this.player.facingAngle,
+          shape: "box"
+        });
+      }
+    }
+
+    hitEnemiesInArc(originX, originY, angle, reach, arcWidth, damage, options) {
+      var opts = options || {};
+      var hits = 0;
+      var i;
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        var enemy = this.enemies[i];
+        var dist = pointDistance(originX, originY, enemy.x, enemy.y);
+        var enemyAngle;
+        var tolerance;
+        if (dist > reach + enemy.radius) {
+          continue;
+        }
+        enemyAngle = Math.atan2(enemy.y - originY, enemy.x - originX);
+        tolerance = Math.abs(angleDifference(enemyAngle, angle));
+        if (tolerance > arcWidth * 0.5 + enemy.radius / Math.max(40, reach)) {
+          continue;
+        }
+        enemy.hp -= damage;
+        if (opts.impulse) {
+          enemy.x += Math.cos(angle) * opts.impulse;
+          enemy.y += Math.sin(angle) * opts.impulse;
+        }
+        this.effects.spawnHit(enemy.x, enemy.y, {
+          color: opts.color || "#ffe07a",
+          ringColor: opts.ringColor || "#fff1c4",
+          radius: enemy.category === "boss" ? 12 : 9
+        });
+        if (enemy.hp <= 0) {
+          this.killEnemy(enemy, enemy.category === "elite" || enemy.category === "boss");
+          this.enemies.splice(i, 1);
+        }
+        hits += 1;
+      }
+      return hits;
+    }
+
+    fireSummerSword() {
+      var level = this.player.swordLevel;
+      var target = this.getNearestEnemy();
+      var angle;
+      var reach;
+      var arcWidth;
+      var damage;
+      var visual;
+      var tipX;
+      var tipY;
+      var echoOffset;
+
+      if (level <= 0 || !target) {
+        return;
+      }
+
+      angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+      this.player.facingAngle = angle;
+      reach = 112 + level * 18;
+      arcWidth = 1.02 + level * 0.08;
+      damage = Math.round(this.player.damage * 0.72 + 14 + level * 10);
+      visual = this.getWeaponVisual("sword");
+      tipX = this.player.x + Math.cos(angle) * (reach * 0.74);
+      tipY = this.player.y + Math.sin(angle) * (reach * 0.74);
+      echoOffset = level >= 4 ? 0.18 : 0;
+
+      this.pushWeaponFx({
+        kind: "slash",
+        x: this.player.x,
+        y: this.player.y,
+        angle: angle,
+        reach: reach,
+        arc: arcWidth,
+        width: 18 + level * 2,
+        life: 0.2,
+        color: visual.color,
+        accentColor: visual.accentColor,
+        trailColor: visual.trailColor,
+        motif: visual.motif
+      });
+      if (echoOffset) {
+        this.pushWeaponFx({
+          kind: "slash",
+          x: this.player.x,
+          y: this.player.y,
+          angle: angle - echoOffset,
+          reach: reach * 0.9,
+          arc: arcWidth * 0.82,
+          width: 10 + level,
+          life: 0.14,
+          color: visual.accentColor,
+          accentColor: "#ffffff",
+          trailColor: visual.trailColor,
+          motif: visual.motif
+        });
+      }
+      this.hitEnemiesInArc(this.player.x, this.player.y, angle, reach, arcWidth, damage, {
+        color: visual.color,
+        ringColor: visual.accentColor,
+        impulse: 4 + level * 1.4
+      });
+      this.spawnWeaponMotifFx(tipX, tipY, visual, 1 + level * 0.25);
+      this.effects.spawnRadialStreakBurst(tipX, tipY, {
+        count: 5 + level,
+        speedMin: 40,
+        speedMax: 104,
+        life: 0.16,
+        color: visual.trailColor,
+        width: 2,
+        length: 16,
+        drag: 0.86
+      });
+      this.spawnSkillSignature("summerSword", tipX, tipY, {
+        power: 1 + level * 0.2,
+        angle: angle,
+        radius: 18 + level * 3
+      });
+      this.player.swordCooldown = Math.max(0.28, 1.12 - level * 0.12) * this.player.specialCooldownFactor;
+    }
+
+    fireBreakerAxe() {
+      var level = this.player.axeLevel;
+      var target = this.getNearestEnemy();
+      var angle;
+      var reach;
+      var arcWidth;
+      var damage;
+      var impactRadius;
+      var visual;
+      var tipX;
+      var tipY;
+      var i;
+
+      if (level <= 0 || !target) {
+        return;
+      }
+
+      angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+      this.player.facingAngle = angle;
+      reach = 124 + level * 16;
+      arcWidth = 0.88 + level * 0.05;
+      damage = Math.round(this.player.damage * 0.94 + 18 + level * 12);
+      impactRadius = 34 + level * 8;
+      visual = this.getWeaponVisual("axe");
+      tipX = this.player.x + Math.cos(angle) * (reach * 0.78);
+      tipY = this.player.y + Math.sin(angle) * (reach * 0.78);
+
+      this.pushWeaponFx({
+        kind: "axe",
+        x: this.player.x,
+        y: this.player.y,
+        angle: angle,
+        reach: reach,
+        arc: arcWidth,
+        width: 24 + level * 3,
+        life: 0.24,
+        color: visual.color,
+        accentColor: visual.accentColor,
+        trailColor: visual.trailColor,
+        motif: visual.motif
+      });
+      this.hitEnemiesInArc(this.player.x, this.player.y, angle, reach, arcWidth, damage, {
+        color: visual.color,
+        ringColor: visual.accentColor,
+        impulse: 10 + level * 2
+      });
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        var enemy = this.enemies[i];
+        if (pointDistance(enemy.x, enemy.y, tipX, tipY) <= impactRadius + enemy.radius) {
+          enemy.hp -= Math.round(damage * 0.38);
+          this.effects.spawnHit(enemy.x, enemy.y, {
+            color: visual.trailColor,
+            ringColor: visual.accentColor,
+            radius: 10
+          });
+          if (enemy.hp <= 0) {
+            this.killEnemy(enemy, enemy.category === "elite" || enemy.category === "boss");
+            this.enemies.splice(i, 1);
+          }
+        }
+      }
+      this.effects.spawnRing(tipX, tipY, {
+        color: visual.color,
+        radius: 16,
+        growth: impactRadius + 26,
+        lineWidth: 3,
+        life: 0.22,
+        fillAlpha: 0.08
+      });
+      this.spawnWeaponMotifFx(tipX, tipY, visual, 1.4 + level * 0.25);
+      this.effects.triggerShake(6 + level, 0.1);
+      this.spawnSkillSignature("breakerAxe", tipX, tipY, {
+        power: 1.1 + level * 0.22,
+        angle: angle,
+        radius: impactRadius * 0.5
+      });
+      this.player.axeCooldown = Math.max(0.52, 1.7 - level * 0.16) * this.player.specialCooldownFactor;
+    }
+
+    fireMysticWand() {
+      var level = this.player.wandLevel;
+      var bolts;
+      var target = this.getNearestEnemy();
+      var angle;
+      var visual;
+      var originX;
+      var originY;
+      var i;
+
+      if (level <= 0 || !target) {
+        return;
+      }
+
+      angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+      this.player.facingAngle = angle;
+      bolts = 1 + Math.floor(level / 2);
+      visual = this.getWeaponVisual("wand");
+      originX = this.player.x + Math.cos(angle) * 22;
+      originY = this.player.y + Math.sin(angle) * 22;
+
+      this.pushWeaponFx({
+        kind: "wandCast",
+        x: this.player.x,
+        y: this.player.y,
+        angle: angle,
+        reach: 60 + level * 8,
+        arc: 0.7,
+        width: 12 + level * 2,
+        life: 0.22,
+        color: visual.color,
+        accentColor: visual.accentColor,
+        trailColor: visual.trailColor,
+        motif: visual.motif
+      });
+
+      for (i = 0; i < bolts; i += 1) {
+        var spread = bolts > 1 ? (i - (bolts - 1) / 2) * 0.18 : 0;
+        this.createPlayerShot({
+          x: Math.cos(angle + spread),
+          y: Math.sin(angle + spread)
+        }, {
+          originX: originX,
+          originY: originY,
+          speed: 420 + level * 30,
+          radius: 7,
+          life: 1.9,
+          damage: Math.round(this.player.damage * 0.56 + 9 + level * 8),
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "wandbolt",
+          skinKind: "pulse",
+          shape: "circle",
+          spin: 10,
+          trailRate: 0.05,
+          homing: 1.4 + level * 0.28,
+          turnRate: 5.5 + level * 1.2,
+          weaponKind: "wand"
+        });
+      }
+
+      this.effects.spawnRing(originX, originY, {
+        color: visual.color,
+        radius: 10,
+        growth: 66 + level * 12,
+        lineWidth: 2,
+        life: 0.18,
+        fillAlpha: 0.06
+      });
+      this.spawnWeaponMotifFx(originX, originY, visual, 1 + level * 0.2);
+      this.spawnSkillSignature("mysticWand", originX, originY, {
+        power: 1 + level * 0.2,
+        angle: angle,
+        radius: 18 + level * 2
+      });
+      this.player.wandCooldown = Math.max(0.38, 1.18 - level * 0.1) * this.player.specialCooldownFactor;
+    }
+
+    updateWeaponFx(dt) {
+      var i;
+      for (i = this.weaponFx.length - 1; i >= 0; i -= 1) {
+        var fx = this.weaponFx[i];
+        fx.life -= dt;
+        fx.age = (fx.age || 0) + dt;
+        if (fx.kind === "wandCast") {
+          fx.reach += dt * 48;
+        }
+        if (fx.life <= 0) {
+          this.weaponFx.splice(i, 1);
+        }
+      }
+    }
+
+    fireNeonNeedles() {
+      var level = this.player.needleLevel;
+      var target = this.getNearestEnemy();
+      var angle;
+      var count;
+      var visual;
+      var i;
+
+      if (level <= 0 || !target) {
+        return;
+      }
+
+      angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
+      this.player.facingAngle = angle;
+      count = 2 + Math.floor(level / 2);
+      visual = this.getSkillVisual("neonNeedle");
+      for (i = 0; i < count; i += 1) {
+        var spread = count > 1 ? (i - (count - 1) / 2) * 0.14 : 0;
+        this.createPlayerShot({
+          x: Math.cos(angle + spread),
+          y: Math.sin(angle + spread)
+        }, {
+          originX: this.player.x + Math.cos(angle) * 18,
+          originY: this.player.y + Math.sin(angle) * 18,
+          speed: this.player.bulletSpeed * 1.12,
+          radius: 5,
+          life: 1.5,
+          damage: Math.round(this.player.damage * 0.36 + 8 + level * 6),
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "needle",
+          skinKind: "crit",
+          shape: "ticket",
+          spin: 12,
+          trailRate: 0.04,
+          homing: 0.9 + level * 0.2,
+          turnRate: 4.8 + level * 0.8
+        });
+      }
+      this.spawnSkillSignature("neonNeedle", this.player.x, this.player.y, {
+        power: 1 + level * 0.2,
+        angle: angle,
+        radius: 14 + level * 2
+      });
+      this.player.needleCooldown = Math.max(0.28, 1.02 - level * 0.08) * this.player.specialCooldownFactor;
+    }
+
+    fireMeteorCall() {
+      var level = this.player.meteorLevel;
+      var target = this.getNearestEnemy();
+      var impactX;
+      var impactY;
+      var radius;
+      var damage;
+      var visual;
+      var i;
+
+      if (level <= 0 || !target) {
+        return;
+      }
+
+      impactX = target.x;
+      impactY = target.y;
+      radius = 42 + level * 8;
+      damage = Math.round(this.player.damage * 0.82 + 18 + level * 11);
+      visual = this.getSkillVisual("meteorCall");
+
+      this.pushWeaponFx({
+        kind: "meteor",
+        x: impactX,
+        y: impactY,
+        angle: -Math.PI * 0.5,
+        reach: 120 + level * 12,
+        arc: 0.2,
+        width: 16 + level * 2,
+        life: 0.28,
+        color: visual.color,
+        accentColor: visual.accentColor,
+        trailColor: visual.trailColor,
+        motif: visual.motif
+      });
+      this.effects.triggerShake(6 + level, 0.12);
+      this.spawnSkillSignature("meteorCall", impactX, impactY, {
+        power: 1.4 + level * 0.2,
+        radius: radius
+      });
+
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        var enemy = this.enemies[i];
+        if (pointDistance(enemy.x, enemy.y, impactX, impactY) <= radius + enemy.radius) {
+          enemy.hp -= damage;
+          this.effects.spawnHit(enemy.x, enemy.y, {
+            color: visual.color,
+            ringColor: visual.accentColor,
+            radius: 12
+          });
+          if (enemy.hp <= 0) {
+            this.killEnemy(enemy, enemy.category === "elite" || enemy.category === "boss");
+            this.enemies.splice(i, 1);
+          }
+        }
+      }
+
+      this.player.meteorCooldown = Math.max(1.2, 4.3 - level * 0.32) * this.player.specialCooldownFactor;
+    }
+
+    updateHaloSigils(dt) {
+      var level = this.player.haloLevel;
+      var count;
+      var radius;
+      var damage;
+      var visual;
+      var i;
+      var j;
+
+      this.haloRender = [];
+      if (level <= 0) {
+        return;
+      }
+
+      count = 1 + Math.floor(level / 2);
+      radius = 84 + level * 8;
+      damage = Math.round(9 + level * 7 + this.player.damage * 0.2);
+      visual = this.getSkillVisual("haloSigil");
+
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        this.enemies[i].haloDamageTimer = Math.max(0, (this.enemies[i].haloDamageTimer || 0) - dt);
+      }
+
+      for (j = 0; j < count; j += 1) {
+        var angle = -this.elapsedSec * (1.4 + level * 0.08) + (Math.PI * 2 * j) / count;
+        this.haloRender.push({
+          x: this.player.x + Math.cos(angle) * radius,
+          y: this.player.y + Math.sin(angle) * radius,
+          radius: 10 + level,
+          angle: angle,
+          color: visual.color,
+          accentColor: visual.accentColor
+        });
+      }
+
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        var enemy = this.enemies[i];
+        if ((enemy.haloDamageTimer || 0) > 0) {
+          continue;
+        }
+        for (j = 0; j < this.haloRender.length; j += 1) {
+          var sigil = this.haloRender[j];
+          if (pointDistance(sigil.x, sigil.y, enemy.x, enemy.y) <= sigil.radius + enemy.radius + 6) {
+            enemy.hp -= damage;
+            enemy.haloDamageTimer = 0.18;
+            this.effects.spawnHit(enemy.x, enemy.y, {
+              color: visual.color,
+              ringColor: visual.accentColor,
+              radius: 9
+            });
+            this.spawnSkillSignature("haloSigil", sigil.x, sigil.y, {
+              power: 0.9 + level * 0.18,
+              angle: sigil.angle,
+              radius: 14 + level * 2
+            });
+            if (enemy.hp <= 0) {
+              this.killEnemy(enemy);
+              this.enemies.splice(i, 1);
+            }
+            break;
+          }
+        }
+      }
     }
 
     updateDroneBuddy(dt) {
@@ -1307,12 +3081,14 @@
       var orbitRadius;
       var i;
       var target;
+      var visual;
 
       this.droneRender = [];
       if (level <= 0) {
         return;
       }
 
+      visual = this.getSkillVisual("droneBuddy");
       droneCount = 1 + Math.floor(level / 3);
       orbitRadius = 52 + level * 10;
       for (i = 0; i < droneCount; i += 1) {
@@ -1345,10 +3121,17 @@
           radius: 5,
           life: 1.18,
           damage: Math.round(this.player.damage * 0.44 + level * 7),
-          color: "#9fd4ff",
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
           kind: "drone"
         });
-        this.effects.spawnHeatRipple(drone.x, drone.y, "#9fd4ff");
+        this.effects.spawnHeatRipple(drone.x, drone.y, visual.rippleColor || visual.color);
+        this.spawnSkillSignature("droneBuddy", drone.x, drone.y, {
+          power: 0.8 + level * 0.18,
+          angle: Math.atan2(direction.y, direction.x),
+          radius: 10 + level * 2
+        });
       }
     }
 
@@ -1375,6 +3158,10 @@
             life: 0.24,
             fillAlpha: 0.06
           });
+          this.spawnSkillSignature("lucky810", this.player.x, this.player.y, {
+            power: 1.2,
+            radius: 24
+          });
           for (i = this.enemies.length - 1; i >= 0; i -= 1) {
             if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= 146 + this.enemies[i].radius) {
               this.enemies[i].hp -= damage;
@@ -1398,6 +3185,7 @@
       var radius;
       var damage;
       var i;
+      var visual;
 
       if (level <= 0) {
         return;
@@ -1405,21 +3193,26 @@
 
       radius = 104 + level * 18;
       damage = Math.round(16 + level * 12 + this.player.damage * 0.22);
+      visual = this.getSkillVisual("saltGuard");
 
       this.effects.spawnRing(this.player.x, this.player.y, {
-        color: "#f7efe0",
+        color: visual.color,
         radius: 20,
         growth: radius,
         lineWidth: 4,
         life: 0.28,
         fillAlpha: 0.08
       });
+      this.spawnSkillSignature("saltGuard", this.player.x, this.player.y, {
+        power: 1.1 + level * 0.2,
+        radius: radius * 0.36
+      });
 
       for (i = this.enemyProjectiles.length - 1; i >= 0; i -= 1) {
         if (pointDistance(this.enemyProjectiles[i].x, this.enemyProjectiles[i].y, this.player.x, this.player.y) <= radius) {
           this.effects.spawnHit(this.enemyProjectiles[i].x, this.enemyProjectiles[i].y, {
-            color: "#f7efe0",
-            ringColor: "#fff1c4",
+            color: visual.color,
+            ringColor: visual.accentColor,
             radius: 7
           });
           this.enemyProjectiles.splice(i, 1);
@@ -1431,8 +3224,8 @@
         if (pointDistance(enemy.x, enemy.y, this.player.x, this.player.y) <= radius + enemy.radius) {
           enemy.hp -= damage;
           this.effects.spawnHit(enemy.x, enemy.y, {
-            color: "#f7efe0",
-            ringColor: "#fff1c4",
+            color: visual.color,
+            ringColor: visual.accentColor,
             radius: 10
           });
           if (enemy.hp <= 0) {
@@ -1450,6 +3243,7 @@
       var volleyCount;
       var i;
       var spread;
+      var bulletVisual = this.getSkinShotVisual("bullet", "#7fe6ff");
       var frenzyBoost = this.player.frenzyTimer > 0 ? 1.4 : 1;
       var critChance = this.player.hypeLevel * 0.08 + (this.player.frenzyTimer > 0 ? 0.14 : 0);
 
@@ -1471,19 +3265,19 @@
           y: Math.sin(baseAngle + spread)
         }, {
           radius: crit ? 8 : 6,
-          color: crit ? "#ffe07a" : "#7fe6ff",
-          damage: Math.round(this.player.damage * frenzyBoost * (crit ? 1.65 : 1))
+          damage: Math.round(this.player.damage * frenzyBoost * (crit ? 1.65 : 1)),
+          skinKind: crit ? "crit" : "bullet"
         });
       }
 
       if (this.player.hypeLevel >= 3 && Math.random() < 0.22) {
         this.createPlayerShot({ x: Math.cos(baseAngle + 0.28), y: Math.sin(baseAngle + 0.28) }, {
-          color: "#ffb86f",
-          damage: Math.round(this.player.damage * frenzyBoost * 0.88)
+          damage: Math.round(this.player.damage * frenzyBoost * 0.88),
+          skinKind: "crit"
         });
         this.createPlayerShot({ x: Math.cos(baseAngle - 0.28), y: Math.sin(baseAngle - 0.28) }, {
-          color: "#ffb86f",
-          damage: Math.round(this.player.damage * frenzyBoost * 0.88)
+          damage: Math.round(this.player.damage * frenzyBoost * 0.88),
+          skinKind: "crit"
         });
       }
 
@@ -1500,14 +3294,33 @@
             radius: 5,
             life: 1.05,
             damage: Math.round(this.player.damage * frenzyBoost * (0.45 + this.player.backstepLevel * 0.08)),
-            color: "#ffcf9d",
             pierce: Math.max(0, this.player.pierce - 1),
-            kind: "backshot"
+            kind: "backshot",
+            skinKind: "backshot"
           });
         }
       }
 
-      this.effects.spawnHeatRipple(this.player.x, this.player.y, "#7fe6ff");
+      this.effects.spawnHeatRipple(this.player.x, this.player.y, bulletVisual.rippleColor);
+      this.spawnSkillSignature("powerShirt", this.player.x, this.player.y, {
+        power: 0.7 + this.getUpgradeLevel("powerShirt") * 0.08 + this.player.hypeLevel * 0.12,
+        angle: baseAngle,
+        radius: 10 + volleyCount * 2
+      });
+      if (this.player.backstepLevel > 0) {
+        this.spawnSkillSignature("backstepVolley", this.player.x, this.player.y, {
+          power: 0.7 + this.player.backstepLevel * 0.18,
+          angle: baseAngle + Math.PI,
+          radius: 16
+        });
+      }
+      if (this.player.hypeLevel > 0) {
+        this.spawnSkillSignature("yarimasuNee", this.player.x, this.player.y, {
+          power: 0.8 + this.player.hypeLevel * 0.18,
+          angle: baseAngle,
+          radius: 18
+        });
+      }
     }
 
     firePulseBurst() {
@@ -1522,16 +3335,20 @@
           radius: 7,
           life: 1.1,
           pierce: 1,
-          color: "#f5adff",
-          kind: "pulse"
+          kind: "pulse",
+          skinKind: "pulse"
         });
       }
       this.effects.spawnRing(this.player.x, this.player.y, {
-        color: "#f5adff",
+        color: this.getSkinShotVisual("pulse", "#f5adff").rippleColor,
         radius: 18,
         growth: 200,
         lineWidth: 5,
         life: 0.36
+      });
+      this.spawnSkillSignature("summerPulse", this.player.x, this.player.y, {
+        power: 1 + this.player.pulseLevel * 0.2,
+        radius: 22 + this.player.pulseLevel * 4
       });
       this.player.pulseCooldown = Math.max(0.78, 2.8 - this.player.pulseLevel * 0.32) * this.player.specialCooldownFactor;
     }
@@ -1545,6 +3362,7 @@
       var endX;
       var endY;
       var i;
+      var beamVisual = this.getSkinShotVisual("beam", "#ffe07a");
 
       if (!target) {
         return;
@@ -1564,7 +3382,8 @@
         y2: endY,
         width: width,
         life: 0.16,
-        color: "#ffe07a"
+        color: beamVisual.color,
+        flashColor: beamVisual.flashColor
       });
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
@@ -1584,12 +3403,20 @@
         }
       }
 
-      this.effects.flashScreen("#ffe07a", 0.06, 0.1);
+      this.effects.flashScreen(beamVisual.flashColor, 0.06, 0.1);
+      this.spawnSkillSignature("sunbeam810", endX, endY, {
+        power: 1.1 + this.player.beamLevel * 0.18,
+        angle: Math.atan2(direction.y, direction.x),
+        radius: width + 14
+      });
       this.player.beamCooldown = Math.max(1.2, 4.4 - this.player.beamLevel * 0.46) * this.player.specialCooldownFactor;
     }
 
     awardXp(amount, x, y) {
       var gained = Math.max(1, Math.round(amount * this.player.xpGainMultiplier));
+      if (this.isInfinityMode) {
+        return 0;
+      }
       this.player.xp += gained;
       this.effects.spawnFloatingText("+" + gained + " " + translate(this.game, "common.xp"), x, y, {
         color: "#88f291",
@@ -1688,6 +3515,10 @@
             fillAlpha: 0.04
           });
         }
+        this.spawnSkillSignature("pickupAura", this.player.x, this.player.y, {
+          power: 1 + this.getUpgradeLevel("pickupAura") * 0.18 + this.player.luckLevel * 0.1,
+          radius: 20 + this.getUpgradeLevel("pickupAura") * 4
+        });
       }
       if (totalXp > 0) {
         this.awardXp(totalXp, this.player.x, this.player.y - 12);
@@ -1753,6 +3584,11 @@
       var specialDef = findSpecialItemDef(pickup.kind);
       if (pickup.kind === "xp") {
         this.awardXp(pickup.xp, this.player.x, this.player.y - 12);
+        if (!this.isInfinityMode) {
+          this.addScore(Math.max(2, Math.round((pickup.xp || 1) * 3)), this.player.x, this.player.y - 24, {
+            silent: true
+          });
+        }
         return;
       }
 
@@ -1769,6 +3605,9 @@
       switch (pickup.kind) {
         case "heal":
           this.healPlayer(pickup.heal || 28);
+          this.addScore(90 + this.hazardRank * 4, this.player.x, this.player.y - 20, {
+            silent: true
+          });
           break;
         case "magnet":
           this.effects.spawnRing(this.player.x, this.player.y, {
@@ -1780,13 +3619,19 @@
             fillAlpha: 0.06
           });
           this.vacuumXpPickups();
+          this.addScore(220 + this.player.level * 12, this.player.x, this.player.y - 20, {
+            color: "#7fe6ff"
+          });
           break;
         case "chest":
           chestCount = this.applyRandomUpgrades(pickup.rolls || 1);
           if (chestCount <= 0) {
             this.spawnRewardCrystals(8, 3);
           }
-          this.effects.spawnChestOpen(this.player.x, this.player.y - 10);
+          this.triggerSkinChestShow();
+          this.addScore(360 + (pickup.rolls || 1) * 180, this.player.x, this.player.y - 24, {
+            color: "#f6c453"
+          });
           break;
         case "item114514":
           this.healPlayer(14);
@@ -1794,12 +3639,20 @@
           this.awardXp(pickup.value || 114, this.player.x, this.player.y - 20);
           this.applyRandomUpgrades(1);
           this.effects.flashScreen("#ffe07a", 0.14, 0.2);
+          this.addScore(1514, this.player.x, this.player.y - 30, {
+            color: "#ffe07a",
+            forceText: true
+          });
           break;
         case "yarimasuItem":
           this.player.frenzyTimer = Math.max(this.player.frenzyTimer, 12);
           this.fireBasicVolley();
           this.firePulseBurst();
           this.effects.flashScreen("#ffb86f", 0.1, 0.14);
+          this.addScore(810, this.player.x, this.player.y - 26, {
+            color: "#ffb86f",
+            forceText: true
+          });
           break;
         case "iizoItem":
           this.healPlayer(this.player.maxHp);
@@ -1812,9 +3665,17 @@
             life: 0.3,
             fillAlpha: 0.08
           });
+          this.addScore(920, this.player.x, this.player.y - 26, {
+            color: "#9cffb8",
+            forceText: true
+          });
           break;
         case "ikuikuItem":
           this.triggerIkuikuPulse();
+          this.addScore(980, this.player.x, this.player.y - 26, {
+            color: "#ff91d7",
+            forceText: true
+          });
           break;
         case "loveItem":
           this.healPlayer(24);
@@ -1822,6 +3683,10 @@
           this.player.loveAuraTimer = Math.max(this.player.loveAuraTimer, 16);
           this.player.loveAuraPulse = 0.1;
           this.effects.flashScreen("#ff7fb3", 0.08, 0.14);
+          this.addScore(1110, this.player.x, this.player.y - 26, {
+            color: "#ff7fb3",
+            forceText: true
+          });
           break;
         default:
           break;
@@ -1890,11 +3755,24 @@
       this.healPlayer(8 + bonusCount * 2);
       this.pushMessage(
         this.game.getLocale() === "ja"
+          ? "最大強化: コイン +" + coinReward
+          : "MAX BUILD: +" + coinReward + " coins",
+        1.3,
+        "#f6c453"
+      );
+      /*
+      this.pushMessage(this.game.getLocale() === "ja" ? "最大強化: コイン +" + coinReward : "MAX BUILD: +" + coinReward + " coins", 1.3, "#f6c453");
+      return; /*
+      this.pushMessage(
+        this.game.getLocale() === "ja"
           ? "強化最大: コイン補填 +" + coinReward
           : "MAX BUILD: +" + coinReward + " coins",
         1.3,
         "#f6c453"
       );
+    }
+
+      */
     }
 
     openLevelUpChoices() {
@@ -1989,6 +3867,7 @@
       }
 
       for (i = 0; i < result.spawned.length; i += 1) {
+        this.applyScoreScalingToEnemy(result.spawned[i]);
         this.enemies.push(result.spawned[i]);
         if (result.spawned[i].category === "elite") {
           this.effects.spawnRing(result.spawned[i].x, result.spawned[i].y, {
@@ -2014,6 +3893,7 @@
       }
 
       for (i = 0; i < result.bosses.length; i += 1) {
+        this.applyScoreScalingToEnemy(result.bosses[i]);
         this.enemies.push(result.bosses[i]);
         this.effects.spawnBossWarning(this.game.enemyName(result.bosses[i].archetypeId || "") || result.bosses[i].label || "BOSS");
       }
@@ -2042,7 +3922,7 @@
               return "language";
             }
             if (buttons[i].action === "title") {
-              this.game.openTitle({ stageId: this.stageId, hazardRank: this.hazardRank });
+              this.game.openTitle({ stageId: this.stageId, hazardRank: this.hazardRank, mode: this.mode });
               return "title";
             }
             if (buttons[i].action === "restart") {
@@ -2081,6 +3961,8 @@
         this.player.facingAngle = Math.atan2(move.y, move.x);
       }
 
+      this.spawnSkinMovementFx(dt, move, moveMagnitude);
+
       if (this.player.afterimageLevel > 0) {
         this.player.afterimageCooldown -= dt;
         if (moveMagnitude > 76 && this.player.afterimageCooldown <= 0) {
@@ -2112,8 +3994,45 @@
         }
       }
 
+      if (this.player.needleLevel > 0) {
+        this.player.needleCooldown -= dt;
+        if (this.player.needleCooldown <= 0) {
+          this.fireNeonNeedles();
+        }
+      }
+
+      if (this.player.meteorLevel > 0) {
+        this.player.meteorCooldown -= dt;
+        if (this.player.meteorCooldown <= 0) {
+          this.fireMeteorCall();
+        }
+      }
+
+      if (this.player.swordLevel > 0) {
+        this.player.swordCooldown -= dt;
+        if (this.player.swordCooldown <= 0) {
+          this.fireSummerSword();
+        }
+      }
+
+      if (this.player.axeLevel > 0) {
+        this.player.axeCooldown -= dt;
+        if (this.player.axeCooldown <= 0) {
+          this.fireBreakerAxe();
+        }
+      }
+
+      if (this.player.wandLevel > 0) {
+        this.player.wandCooldown -= dt;
+        if (this.player.wandCooldown <= 0) {
+          this.fireMysticWand();
+        }
+      }
+
+      this.updateHaloSigils(dt);
       this.updateDroneBuddy(dt);
       this.updateTimedBuffs(dt);
+      this.updateWeaponFx(dt);
 
       if (this.playerHitTimer > 0) {
         this.playerHitTimer -= dt;
@@ -2125,6 +4044,7 @@
       var orbCount;
       var radius;
       var damage;
+      var orbitVisual;
       var i;
       var j;
 
@@ -2136,6 +4056,7 @@
       orbCount = 1 + orbitLevel;
       radius = 54 + orbitLevel * 7;
       damage = Math.round(10 + orbitLevel * 8 + this.player.damage * 0.18);
+      orbitVisual = this.getSkillVisual("ramuneOrbit");
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         this.enemies[i].orbitDamageTimer = Math.max(0, (this.enemies[i].orbitDamageTimer || 0) - dt);
@@ -2145,7 +4066,13 @@
         var angle = this.elapsedSec * (2.8 + orbitLevel * 0.22) + (Math.PI * 2 * j) / orbCount;
         var ox = this.player.x + Math.cos(angle) * radius;
         var oy = this.player.y + Math.sin(angle) * radius;
-        this.orbitRender.push({ x: ox, y: oy, radius: 8 + orbitLevel * 0.8 });
+        this.orbitRender.push({
+          x: ox,
+          y: oy,
+          radius: 8 + orbitLevel * 0.8,
+          color: orbitVisual.color,
+          accentColor: orbitVisual.accentColor
+        });
       }
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
@@ -2159,9 +4086,14 @@
             enemy.hp -= damage;
             enemy.orbitDamageTimer = 0.14;
             this.effects.spawnHit(enemy.x, enemy.y, {
-              color: "#8ff7ff",
-              ringColor: "#dffbff",
+              color: orbitVisual.color,
+              ringColor: orbitVisual.accentColor,
               radius: 9
+            });
+            this.spawnSkillSignature("ramuneOrbit", orb.x, orb.y, {
+              power: 0.8 + orbitLevel * 0.14,
+              angle: Math.atan2(enemy.y - orb.y, enemy.x - orb.x),
+              radius: 12 + orbitLevel * 2
             });
             if (enemy.hp <= 0) {
               this.killEnemy(enemy);
@@ -2223,18 +4155,23 @@
     }
 
     dropEnemyLoot(enemy, giveChestFx) {
-      var extraDropChance;
-      var extraDrops;
-      var d;
       var lowHp = this.player.hp / Math.max(1, this.player.maxHp) <= 0.58;
       var luckBoost = this.player.luckLevel * 0.01;
-      var specialChance = enemy.category === "boss" ? 1 : enemy.category === "elite" ? (0.34 + this.player.luckLevel * 0.03) : 0;
+      var specialChance = enemy.category === "boss" ? (0.18 + luckBoost * 2) : enemy.category === "elite" ? (0.035 + luckBoost * 0.8) : 0;
+      var healChance = enemy.category === "boss"
+        ? (lowHp ? 0.18 + luckBoost : 0.04)
+        : enemy.category === "elite"
+          ? (lowHp ? 0.045 + luckBoost * 0.6 : 0)
+          : 0;
+      var magnetChance = enemy.category === "boss" ? (0.08 + luckBoost) : enemy.category === "elite" ? (0.02 + luckBoost * 0.4) : 0;
 
-      this.createPickup("xp", enemy.x, enemy.y, {
-        radius: enemy.category === "boss" ? 10 : enemy.category === "elite" ? 8 : 7,
-        xp: enemy.category === "boss" ? enemy.xp + 12 : enemy.category === "elite" ? enemy.xp + 6 : enemy.xp,
-        color: enemy.category === "boss" ? "#f6c453" : enemy.category === "elite" ? "#ffb86f" : "#88f291"
-      });
+      if (!this.isInfinityMode) {
+        this.createPickup("xp", enemy.x, enemy.y, {
+          radius: enemy.category === "boss" ? 10 : enemy.category === "elite" ? 8 : 7,
+          xp: enemy.category === "boss" ? enemy.xp + 12 : enemy.category === "elite" ? enemy.xp + 6 : enemy.xp,
+          color: enemy.category === "boss" ? "#f6c453" : enemy.category === "elite" ? "#ffb86f" : "#88f291"
+        });
+      }
 
       if (giveChestFx || enemy.category === "boss" || enemy.category === "elite") {
         this.createPickup("chest", enemy.x + 12, enemy.y - 8, {
@@ -2244,7 +4181,7 @@
         });
       }
 
-      if (lowHp && Math.random() < 0.08 + luckBoost) {
+      if (healChance > 0 && Math.random() < healChance) {
         this.createPickup("heal", enemy.x - 12, enemy.y + 8, {
           radius: 9,
           color: "#9cffb8",
@@ -2252,7 +4189,7 @@
         });
       }
 
-      if (Math.random() < 0.018 + this.player.luckLevel * 0.008) {
+      if (magnetChance > 0 && Math.random() < magnetChance) {
         this.createPickup("magnet", enemy.x + 18, enemy.y + 10, {
           radius: 10,
           color: "#7fe6ff"
@@ -2266,18 +4203,6 @@
           value: 114
         });
       }
-
-      extraDropChance = 0.16 + this.player.luckLevel * 0.07;
-      if (this.player.luckLevel > 0 && Math.random() < extraDropChance) {
-        extraDrops = 1 + Math.floor(Math.random() * (1 + Math.floor(this.player.luckLevel / 2)));
-        for (d = 0; d < extraDrops; d += 1) {
-          this.createPickup("xp", enemy.x + Math.cos((Math.PI * 2 * d) / Math.max(1, extraDrops)) * (10 + d * 6), enemy.y + Math.sin((Math.PI * 2 * d) / Math.max(1, extraDrops)) * (10 + d * 6), {
-            radius: 6,
-            xp: 1 + Math.floor(this.player.luckLevel / 2),
-            color: "#ffe07a"
-          });
-        }
-      }
     }
 
     killEnemy(enemy, giveChestFx) {
@@ -2290,7 +4215,7 @@
       }
       this.dropEnemyLoot(enemy, giveChestFx);
 
-      if (enemy.category === "boss" && enemy.chestType === "evolution" && this.elapsedSec >= RUN_LENGTH_SEC - 5) {
+      if (!this.isInfinityMode && enemy.category === "boss" && enemy.chestType === "evolution" && this.elapsedSec >= RUN_LENGTH_SEC - 5) {
         this.finishRun("CLEARED");
       }
     }
@@ -2302,8 +4227,28 @@
       for (i = this.projectiles.length - 1; i >= 0; i -= 1) {
         var shot = this.projectiles[i];
         shot.life -= dt;
+        shot.age = (shot.age || 0) + dt;
+        if (shot.homing > 0 && this.enemies.length) {
+          var target = this.getNearestEnemyFrom(shot.x, shot.y);
+          if (target) {
+            var desiredAngle = Math.atan2(target.y - shot.y, target.x - shot.x);
+            var currentAngle = Math.atan2(shot.vy, shot.vx);
+            var speed = Math.sqrt(shot.vx * shot.vx + shot.vy * shot.vy) || this.player.bulletSpeed;
+            currentAngle += clamp(angleDifference(desiredAngle, currentAngle), -shot.turnRate * dt, shot.turnRate * dt);
+            shot.vx = Math.cos(currentAngle) * speed;
+            shot.vy = Math.sin(currentAngle) * speed;
+          }
+          shot.homing = Math.max(0, shot.homing - dt);
+        }
         shot.x += shot.vx * dt;
         shot.y += shot.vy * dt;
+        if (shot.trailRate > 0) {
+          shot.trailTimer -= dt;
+          if (shot.trailTimer <= 0) {
+            shot.trailTimer += shot.trailRate;
+            this.spawnPlayerShotTrail(shot);
+          }
+        }
         if (shot.life <= 0 || pointDistance(shot.x, shot.y, this.player.x, this.player.y) > DESPAWN_DISTANCE) {
           this.projectiles.splice(i, 1);
           continue;
@@ -2358,6 +4303,114 @@
       }
     }
 
+    applyEnemySynergies() {
+      var i;
+      var j;
+      var k;
+      var left;
+      var right;
+      var bucket;
+      var grid = {};
+      var cellSize = 160;
+      var closeRangeSq = 150 * 150;
+      var cx;
+      var cy;
+      var nx;
+      var ny;
+      var key;
+
+      function applyPair(a, b) {
+        if (
+          (a.archetypeId === "speakerTotem" && (b.category === "rush" || b.archetypeId === "cometHeron" || b.archetypeId === "shadeRunner")) ||
+          (b.archetypeId === "speakerTotem" && (a.category === "rush" || a.archetypeId === "cometHeron" || a.archetypeId === "shadeRunner"))
+        ) {
+          a.synergyColor = a.synergyColor || "#ff91d7";
+          b.synergyColor = b.synergyColor || "#ff91d7";
+          if (a.archetypeId !== "speakerTotem") {
+            a.synergySpeed = Math.max(a.synergySpeed, 1.22);
+          }
+          if (b.archetypeId !== "speakerTotem") {
+            b.synergySpeed = Math.max(b.synergySpeed, 1.22);
+          }
+        }
+
+        if (a.archetypeId === "heatIdol" || a.archetypeId === "stallLantern" || b.archetypeId === "heatIdol" || b.archetypeId === "stallLantern") {
+          a.synergyColor = a.synergyColor || "#ffb86f";
+          b.synergyColor = b.synergyColor || "#ffb86f";
+          a.synergyDamage = Math.max(a.synergyDamage, 1.2);
+          b.synergyDamage = Math.max(b.synergyDamage, 1.2);
+        }
+
+        if (
+          (a.archetypeId === "brainGolem" && (b.category === "ranged" || b.category === "disruptor")) ||
+          (b.archetypeId === "brainGolem" && (a.category === "ranged" || a.category === "disruptor")) ||
+          (a.archetypeId === "sunspotMine" && b.category === "wall") ||
+          (b.archetypeId === "sunspotMine" && a.category === "wall")
+        ) {
+          a.synergyColor = a.synergyColor || "#d6d0ff";
+          b.synergyColor = b.synergyColor || "#d6d0ff";
+          a.synergyDamage = Math.max(a.synergyDamage, 1.14);
+          b.synergyDamage = Math.max(b.synergyDamage, 1.14);
+        }
+
+        if (
+          (a.archetypeId === "mirrorMoth" && (b.archetypeId === "chlorineShade" || b.archetypeId === "rumorWisp")) ||
+          (b.archetypeId === "mirrorMoth" && (a.archetypeId === "chlorineShade" || a.archetypeId === "rumorWisp"))
+        ) {
+          a.synergyColor = a.synergyColor || "#8db4ff";
+          b.synergyColor = b.synergyColor || "#8db4ff";
+          a.synergySpeed = Math.max(a.synergySpeed, 1.16);
+          b.synergySpeed = Math.max(b.synergySpeed, 1.16);
+        }
+      }
+
+      for (i = 0; i < this.enemies.length; i += 1) {
+        this.enemies[i].speed = this.enemies[i].baseSpeed || this.enemies[i].speed;
+        this.enemies[i].damage = this.enemies[i].baseDamage || this.enemies[i].damage;
+        this.enemies[i].synergySpeed = 1;
+        this.enemies[i].synergyDamage = 1;
+        this.enemies[i].synergyColor = "";
+        this.enemies[i]._synergyIndex = i;
+        cx = Math.floor(this.enemies[i].x / cellSize);
+        cy = Math.floor(this.enemies[i].y / cellSize);
+        key = cx + ":" + cy;
+        if (!grid[key]) {
+          grid[key] = [];
+        }
+        grid[key].push(this.enemies[i]);
+      }
+
+      for (i = 0; i < this.enemies.length; i += 1) {
+        left = this.enemies[i];
+        cx = Math.floor(left.x / cellSize);
+        cy = Math.floor(left.y / cellSize);
+        for (ny = cy - 1; ny <= cy + 1; ny += 1) {
+          for (nx = cx - 1; nx <= cx + 1; nx += 1) {
+            bucket = grid[nx + ":" + ny];
+            if (!bucket) {
+              continue;
+            }
+            for (k = 0; k < bucket.length; k += 1) {
+              right = bucket[k];
+              if (right._synergyIndex <= left._synergyIndex) {
+                continue;
+              }
+              if (distanceSquared(left, right) > closeRangeSq) {
+                continue;
+              }
+              applyPair(left, right);
+            }
+          }
+        }
+      }
+
+      for (i = 0; i < this.enemies.length; i += 1) {
+        this.enemies[i].speed = (this.enemies[i].baseSpeed || this.enemies[i].speed) * (this.enemies[i].synergySpeed || 1);
+        this.enemies[i].damage = Math.max(1, Math.round((this.enemies[i].baseDamage || this.enemies[i].damage) * (this.enemies[i].synergyDamage || 1)));
+        delete this.enemies[i]._synergyIndex;
+      }
+    }
+
     updateEnemies(dt) {
       var i;
       var enemy;
@@ -2366,6 +4419,8 @@
       var velocityX;
       var velocityY;
       var sideAngle;
+
+      this.applyEnemySynergies();
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         enemy = this.enemies[i];
@@ -2410,6 +4465,25 @@
           moveScale = toPlayer.length < 180 ? 0.06 : 0.36;
         } else if (enemy.archetypeId === "heatIdol") {
           moveScale = toPlayer.length < 210 ? -0.2 : 0.78;
+        } else if (enemy.archetypeId === "toastPhantom") {
+          sideAngle = Math.sin(this.elapsedSec * 5.8 + i * 0.7) * 0.62;
+          velocityX += Math.cos(Math.atan2(toPlayer.y, toPlayer.x) + Math.PI * 0.5) * sideAngle * 0.7;
+          velocityY += Math.sin(Math.atan2(toPlayer.y, toPlayer.x) + Math.PI * 0.5) * sideAngle * 0.7;
+          moveScale = toPlayer.length < 180 ? -0.18 : 0.74;
+        } else if (enemy.archetypeId === "forgeSmith") {
+          moveScale = toPlayer.length < 240 ? -0.36 : 0.46;
+        } else if (enemy.archetypeId === "brainGolem") {
+          moveScale = toPlayer.length < 160 ? 0.08 : 0.28;
+        } else if (enemy.archetypeId === "cometHeron") {
+          sideAngle = Math.sin(this.elapsedSec * 9 + i * 1.2) * 0.4;
+          velocityX += -toPlayer.y * sideAngle;
+          velocityY += toPlayer.x * sideAngle;
+          moveScale *= 1.18;
+        } else if (enemy.archetypeId === "abyssPriest") {
+          sideAngle = Math.sin(this.elapsedSec * 4.2 + i * 0.6) * 0.4;
+          velocityX += -toPlayer.y * sideAngle;
+          velocityY += toPlayer.x * sideAngle;
+          moveScale = toPlayer.length < 220 ? -0.22 : 0.66;
         }
 
         if (enemy.archetypeId === "clockNeedleHound") {
@@ -2431,6 +4505,16 @@
           if (enemy.dashBoost > 0) {
             enemy.dashBoost -= dt;
             moveScale *= 2.7;
+          }
+        } else if (enemy.archetypeId === "cometHeron") {
+          enemy.dashTimer = (enemy.dashTimer || 0.72) - dt;
+          if (enemy.dashTimer <= 0) {
+            enemy.dashTimer = 1.52;
+            enemy.dashBoost = 0.26;
+          }
+          if (enemy.dashBoost > 0) {
+            enemy.dashBoost -= dt;
+            moveScale *= 2.3;
           }
         }
 
@@ -2593,6 +4677,120 @@
             lineWidth: 3,
             life: 0.22
           });
+        } else if (enemy.archetypeId === "toastPhantom" && enemy.attackTimer <= 0) {
+          angle = Math.atan2(toPlayer.y, toPlayer.x);
+          enemy.attackTimer = 1.62;
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#ff9dc9",
+            radius: 12,
+            growth: 32,
+            lineWidth: 2,
+            life: 0.16,
+            fillAlpha: 0.06
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle), y: Math.sin(angle) }, {
+            speed: 188 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 7,
+            damage: enemy.damage,
+            color: "#ff9dc9",
+            kind: "toast",
+            trailRate: 0.06,
+            spin: 5
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle + 0.28), y: Math.sin(angle + 0.28) }, {
+            speed: 176 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#ffc5df",
+            kind: "toast",
+            trailRate: 0.07,
+            spin: 4
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle - 0.28), y: Math.sin(angle - 0.28) }, {
+            speed: 176 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#ffc5df",
+            kind: "toast",
+            trailRate: 0.07,
+            spin: 4
+          });
+        } else if (enemy.archetypeId === "forgeSmith" && enemy.attackTimer <= 0) {
+          angle = Math.atan2(toPlayer.y, toPlayer.x);
+          enemy.attackTimer = 1.85;
+          this.effects.spawnRadialStreakBurst(enemy.x, enemy.y, {
+            count: 6,
+            speedMin: 28,
+            speedMax: 72,
+            life: 0.18,
+            color: "#d5dde7",
+            width: 2,
+            length: 14,
+            drag: 0.86
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle), y: Math.sin(angle) }, {
+            speed: 182 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 9,
+            damage: enemy.damage + 2,
+            color: "#d5dde7",
+            kind: "anvil",
+            trailRate: 0.08,
+            spin: 8
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle + 0.24), y: Math.sin(angle + 0.24) }, {
+            speed: 166 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage,
+            color: "#f0e7da",
+            kind: "anvil",
+            trailRate: 0.1,
+            spin: 7
+          });
+        } else if (enemy.archetypeId === "brainGolem" && enemy.attackTimer <= 0) {
+          enemy.attackTimer = 2.4;
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#f0a7a7",
+            radius: 18,
+            growth: 52,
+            lineWidth: 3,
+            life: 0.18,
+            fillAlpha: 0.08
+          });
+          for (var spore = 0; spore < 4; spore += 1) {
+            var sporeAngle = (Math.PI * 2 * spore) / 4 + Math.PI * 0.25;
+            this.createEnemyShot(enemy, { x: Math.cos(sporeAngle), y: Math.sin(sporeAngle) }, {
+              speed: 154 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+              radius: 7,
+              damage: enemy.damage - 1,
+              color: "#f0a7a7",
+              kind: "spore",
+              trailRate: 0.09,
+              spin: 5
+            });
+          }
+        } else if (enemy.archetypeId === "abyssPriest" && enemy.attackTimer <= 0) {
+          enemy.attackTimer = 1.24;
+          this.effects.flashScreen("#d9d1ff", 0.035, 0.06);
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#d9d1ff",
+            radius: 16,
+            growth: 64,
+            lineWidth: 3,
+            life: 0.18,
+            fillAlpha: 0.06
+          });
+          for (var relic = 0; relic < 6; relic += 1) {
+            var relicAngle = (Math.PI * 2 * relic) / 6 + this.elapsedSec * 0.25;
+            this.createEnemyShot(enemy, { x: Math.cos(relicAngle), y: Math.sin(relicAngle) }, {
+              speed: 214 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+              radius: 7,
+              damage: enemy.damage - 2,
+              color: "#d9d1ff",
+              kind: "relic",
+              trailRate: 0.05,
+              spin: 9
+            });
+          }
         } else if (enemy.category === "ranged" && enemy.attackTimer <= 0) {
           enemy.attackTimer = enemy.archetypeId === "chlorineShade" ? 1.35 : 1.75;
           if (enemy.archetypeId === "chlorineShade") {
@@ -2682,17 +4880,25 @@
       var survivorState = this.game.state.survivor || {};
       var previousUnlocked;
       var nextUnlocked;
+      var unlockedSkins;
       if (this.runEnded) {
         return;
       }
       this.runEnded = true;
       this.endReason = reason;
+      unlockedSkins = this.game.unlockScoreSkins ? this.game.unlockScoreSkins(this.score) : [];
       survivorState.totalRuns = (survivorState.totalRuns || 0) + 1;
       survivorState.bestTimeSec = Math.max(survivorState.bestTimeSec || 0, Math.floor(this.elapsedSec));
+      survivorState.bestScore = Math.max(survivorState.bestScore || 0, Math.floor(this.score));
+      if (this.isInfinityMode) {
+        survivorState.bestEndlessScore = Math.max(survivorState.bestEndlessScore || 0, Math.floor(this.score));
+        survivorState.bestEndlessTimeSec = Math.max(survivorState.bestEndlessTimeSec || 0, Math.floor(this.elapsedSec));
+      }
       survivorState.bestLevel = Math.max(survivorState.bestLevel || 1, this.player.level);
       survivorState.bestKills = Math.max(survivorState.bestKills || 0, this.player.kills);
       survivorState.lastStageId = this.stageId;
       survivorState.lastRank = this.hazardRank;
+      survivorState.lastMode = this.mode;
       previousUnlocked = typeof survivorState.unlockedRank === "number" ? survivorState.unlockedRank : 0;
       nextUnlocked = calculateUnlockedRank(
         survivorState.bestTimeSec,
@@ -2711,6 +4917,9 @@
           this.game.audio.playPickupCue("rankUnlocked");
         }
         this.pushMessage(translate(this.game, "survivor.rankUnlocked", { rank: nextUnlocked }), 1.8, "#ffe07a");
+      }
+      if (unlockedSkins.length && this.game.audio && this.game.audio.playPickupCue) {
+        this.game.audio.playPickupCue("chest");
       }
     }
 
@@ -2785,15 +4994,29 @@
       }
 
       this.elapsedSec += dt;
+      this.scoreRemainder += dt * 3;
+      if (this.scoreRemainder >= 1) {
+        this.addScore(Math.floor(this.scoreRemainder), this.player.x, this.player.y - 42, {
+          silent: true
+        });
+        this.scoreRemainder %= 1;
+      }
+      var nextStageShift = getStageShiftIndex(this.elapsedSec);
+      if (nextStageShift !== this.stageShiftIndex) {
+        this.stageShiftIndex = nextStageShift;
+        this.effects.flashScreen(this.getLiveStageTheme().accent, 0.08, 0.14);
+        this.pushMessage(this.game.getLocale() === "ja" ? "ステージ変化" : "STAGE SHIFT", 1.1, this.getLiveStageTheme().accent);
+      }
       this.updatePlayer(dt, input);
       this.updateCamera(dt);
       this.updateMerchant(dt);
 
       spawnResult = this.spawner.update(dt, {
-        elapsedSec: this.elapsedSec,
+        elapsedSec: this.getSpawnerElapsedSec(),
         player: this.player,
         enemies: this.enemies,
         hazardRank: this.hazardRank,
+        spawnIntensity: this.getSpawnIntensity(),
         view: this.getViewRect()
       });
 
@@ -2810,14 +5033,15 @@
         this.openLevelUpChoices();
       }
 
-      if (this.elapsedSec >= RUN_LENGTH_SEC && !this.enemies.length) {
+      if (!this.isInfinityMode && this.elapsedSec >= RUN_LENGTH_SEC && !this.enemies.length) {
         this.finishRun("CLEARED");
       }
     }
 
     drawBackground(renderer, shake) {
       var ctx = renderer.ctx;
-      var theme = this.stageTheme;
+      var theme = this.getLiveStageTheme();
+      var shift = this.stageShiftIndex;
       var tile = 96;
       var startTileX = Math.floor(this.camera.x / tile) - 2;
       var endTileX = Math.floor((this.camera.x + ns.constants.GAME_WIDTH) / tile) + 2;
@@ -2877,6 +5101,49 @@
             ctx.globalAlpha = 1;
           }
         }
+      }
+
+      if (shift >= 1) {
+        ctx.strokeStyle = theme.accent;
+        ctx.globalAlpha = 0.08;
+        ctx.lineWidth = 2;
+        for (tx = -1; tx <= 5; tx += 1) {
+          ctx.beginPath();
+          ctx.moveTo(tx * 180 - 40, -20);
+          ctx.lineTo(tx * 180 + 120, ns.constants.GAME_HEIGHT + 20);
+          ctx.stroke();
+        }
+      }
+
+      if (shift >= 2) {
+        ctx.globalAlpha = 0.06;
+        for (ty = startTileY; ty <= endTileY; ty += 1) {
+          for (tx = startTileX; tx <= endTileX; tx += 1) {
+            if (hash2d(tx + 12.4, ty - 8.8) < 0.72) {
+              continue;
+            }
+            worldX = tx * tile;
+            worldY = ty * tile;
+            screenX = worldX - this.camera.x;
+            screenY = worldY - this.camera.y;
+            ctx.fillStyle = theme.glow;
+            ctx.beginPath();
+            ctx.arc(screenX + tile * 0.5, screenY + tile * 0.5, 16 + hash2d(tx - 2.1, ty + 4.6) * 22, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      if (shift >= 3) {
+        ctx.strokeStyle = "#fff1c4";
+        ctx.globalAlpha = 0.1;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ns.constants.GAME_WIDTH * 0.5, ns.constants.GAME_HEIGHT * 0.5, 94 + Math.sin(this.elapsedSec * 2.2) * 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(ns.constants.GAME_WIDTH * 0.5, ns.constants.GAME_HEIGHT * 0.5, 168 + Math.cos(this.elapsedSec * 1.7) * 24, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       ctx.fillStyle = theme.lane;
@@ -2965,6 +5232,157 @@
       ctx.restore();
     }
 
+    drawPassiveSkillAuras(ctx, playerScreen, moveMagnitude) {
+      var t = this.elapsedSec;
+      var angle = this.player.facingAngle;
+
+      if (this.getUpgradeLevel("pickupAura") > 0) {
+        var auraVisual = this.getSkillVisual("pickupAura");
+        ctx.save();
+        ctx.strokeStyle = auraVisual.color;
+        ctx.globalAlpha = 0.18;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x, playerScreen.y + 8, Math.min(160, this.player.pickupRange * 0.42) + Math.sin(t * 3) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("powerShirt") > 0) {
+        var shirtVisual = this.getSkillVisual("powerShirt");
+        ctx.save();
+        ctx.strokeStyle = shirtVisual.accentColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playerScreen.x - 16, playerScreen.y - 6);
+        ctx.lineTo(playerScreen.x, playerScreen.y - 20);
+        ctx.lineTo(playerScreen.x + 16, playerScreen.y - 6);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("coldMugicha") > 0) {
+        var mugiVisual = this.getSkillVisual("coldMugicha");
+        ctx.save();
+        ctx.fillStyle = mugiVisual.trailColor;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x - 12, playerScreen.y - 28 + Math.sin(t * 4.8) * 3, 3, 0, Math.PI * 2);
+        ctx.arc(playerScreen.x + 10, playerScreen.y - 24 + Math.cos(t * 4.2) * 3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("quickStep") > 0 && moveMagnitude > 50) {
+        var quickVisual = this.getSkillVisual("quickStep");
+        ctx.save();
+        ctx.strokeStyle = quickVisual.trailColor;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playerScreen.x - Math.cos(angle) * 16, playerScreen.y - Math.sin(angle) * 16);
+        ctx.lineTo(playerScreen.x - Math.cos(angle) * 34, playerScreen.y - Math.sin(angle) * 34);
+        ctx.moveTo(playerScreen.x - Math.cos(angle + 0.2) * 12, playerScreen.y - Math.sin(angle + 0.2) * 12);
+        ctx.lineTo(playerScreen.x - Math.cos(angle + 0.2) * 28, playerScreen.y - Math.sin(angle + 0.2) * 28);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("thickNeck") > 0) {
+        var neckVisual = this.getSkillVisual("thickNeck");
+        ctx.save();
+        ctx.fillStyle = neckVisual.color;
+        ctx.globalAlpha = 0.22;
+        ctx.fillRect(playerScreen.x - 20, playerScreen.y - 2, 8, 16);
+        ctx.fillRect(playerScreen.x + 12, playerScreen.y - 2, 8, 16);
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("pierceSandal") > 0) {
+        var pierceVisual = this.getSkillVisual("pierceSandal");
+        ctx.save();
+        ctx.translate(playerScreen.x + Math.cos(angle) * 24, playerScreen.y + Math.sin(angle) * 24);
+        ctx.rotate(angle);
+        ctx.strokeStyle = pierceVisual.accentColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-10, -6);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(-10, 6);
+        ctx.moveTo(0, -6);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(0, 6);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("lucky810") > 0) {
+        var luckVisual = this.getSkillVisual("lucky810");
+        ctx.save();
+        ctx.fillStyle = luckVisual.color;
+        ctx.globalAlpha = 0.8;
+        for (var l = 0; l < 3; l += 1) {
+          var la = t * 1.2 + l * 2.1;
+          ctx.fillRect(playerScreen.x + Math.cos(la) * 28 - 2, playerScreen.y - 18 + Math.sin(la) * 10 - 2, 4, 4);
+        }
+        ctx.restore();
+      }
+
+      if (this.getUpgradeLevel("heatSink") > 0) {
+        var heatVisual = this.getSkillVisual("heatSink");
+        ctx.save();
+        ctx.strokeStyle = heatVisual.color;
+        ctx.globalAlpha = 0.28;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playerScreen.x - 14, playerScreen.y - 32 + Math.sin(t * 6) * 2);
+        ctx.lineTo(playerScreen.x - 8, playerScreen.y - 42 + Math.sin(t * 6) * 2);
+        ctx.moveTo(playerScreen.x, playerScreen.y - 34 + Math.cos(t * 5.4) * 2);
+        ctx.lineTo(playerScreen.x + 4, playerScreen.y - 46 + Math.cos(t * 5.4) * 2);
+        ctx.moveTo(playerScreen.x + 14, playerScreen.y - 32 + Math.sin(t * 5.6) * 2);
+        ctx.lineTo(playerScreen.x + 8, playerScreen.y - 44 + Math.sin(t * 5.6) * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.player.shieldTimer > 0) {
+        var shieldVisual = this.getSkillVisual("saltGuard");
+        ctx.save();
+        ctx.strokeStyle = shieldVisual.accentColor;
+        ctx.globalAlpha = 0.28;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 16 + Math.sin(t * 5) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.player.frenzyTimer > 0) {
+        var frenzyVisual = this.getSkillVisual("yarimasuNee");
+        ctx.save();
+        ctx.strokeStyle = frenzyVisual.color;
+        ctx.globalAlpha = 0.28;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playerScreen.x - 18, playerScreen.y - 26);
+        ctx.lineTo(playerScreen.x - 8, playerScreen.y - 38);
+        ctx.moveTo(playerScreen.x + 18, playerScreen.y - 26);
+        ctx.lineTo(playerScreen.x + 8, playerScreen.y - 38);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.player.loveAuraTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = "#ff91d7";
+        ctx.globalAlpha = 0.18;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 22 + Math.sin(t * 4.5) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     drawWorld(renderer, input) {
       var ctx = renderer.ctx;
       var shake = this.effects.getShakeOffset();
@@ -2983,12 +5401,7 @@
 
       for (i = 0; i < this.projectiles.length; i += 1) {
         var shotScreen = this.worldToScreen(this.projectiles[i].x, this.projectiles[i].y, shake);
-        ctx.save();
-        ctx.translate(shotScreen.x, shotScreen.y);
-        ctx.rotate(this.elapsedSec * 10);
-        ctx.fillStyle = this.projectiles[i].color;
-        ctx.fillRect(-this.projectiles[i].radius, -this.projectiles[i].radius, this.projectiles[i].radius * 2, this.projectiles[i].radius * 2);
-        ctx.restore();
+        this.drawPlayerProjectile(ctx, this.projectiles[i], shotScreen.x, shotScreen.y);
       }
 
       for (i = 0; i < this.enemyProjectiles.length; i += 1) {
@@ -3001,13 +5414,32 @@
         var start = this.worldToScreen(beam.x1, beam.y1, shake);
         var end = this.worldToScreen(beam.x2, beam.y2, shake);
         ctx.save();
-        ctx.strokeStyle = beam.color;
-        ctx.lineWidth = beam.width * (beam.life / 0.16);
-        ctx.globalAlpha = beam.life / 0.16;
+        ctx.strokeStyle = beam.flashColor || beam.color;
+        ctx.lineWidth = beam.width * 1.8 * (beam.life / 0.16);
+        ctx.globalAlpha = 0.22 * (beam.life / 0.16);
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
+        ctx.strokeStyle = beam.color;
+        ctx.lineWidth = beam.width * (beam.life / 0.16);
+        ctx.globalAlpha = 0.72 * (beam.life / 0.16);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+        ctx.strokeStyle = "#fffdf2";
+        ctx.lineWidth = Math.max(2, beam.width * 0.24) * (beam.life / 0.16);
+        ctx.globalAlpha = 0.8 * (beam.life / 0.16);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+        ctx.fillStyle = beam.flashColor || beam.color;
+        ctx.globalAlpha = 0.4 * (beam.life / 0.16);
+        ctx.beginPath();
+        ctx.arc(end.x, end.y, beam.width * 0.7, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 
@@ -3016,6 +5448,16 @@
         var enemyScreen = this.worldToScreen(enemy.x, enemy.y, shake);
         if (enemyScreen.x < -80 || enemyScreen.y < -80 || enemyScreen.x > ns.constants.GAME_WIDTH + 80 || enemyScreen.y > ns.constants.GAME_HEIGHT + 80) {
           continue;
+        }
+        if (enemy.synergyColor) {
+          ctx.save();
+          ctx.strokeStyle = enemy.synergyColor;
+          ctx.globalAlpha = 0.18;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(enemyScreen.x, enemyScreen.y, enemy.radius + 8 + Math.sin(this.elapsedSec * 4 + i) * 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
         }
         renderer.drawSurvivorEnemySprite(enemy, enemyScreen.x, enemyScreen.y, {
           pulse: this.elapsedSec * 5
@@ -3030,6 +5472,8 @@
           ctx.fillRect(enemyScreen.x - enemy.radius, enemyScreen.y - enemy.radius - 13, hpWidth * hpRatio, 5);
         }
       }
+
+      this.drawWeaponFx(ctx, shake);
 
       if (this.merchant.active) {
         var merchantScreen = this.worldToScreen(this.merchant.x, this.merchant.y, shake);
@@ -3051,22 +5495,44 @@
 
       for (i = 0; i < this.orbitRender.length; i += 1) {
         var orbScreen = this.worldToScreen(this.orbitRender[i].x, this.orbitRender[i].y, shake);
-        ctx.fillStyle = "#8ff7ff";
+        ctx.fillStyle = this.orbitRender[i].color || "#8ff7ff";
         ctx.beginPath();
         ctx.arc(orbScreen.x, orbScreen.y, this.orbitRender[i].radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#dffbff";
+        ctx.strokeStyle = this.orbitRender[i].accentColor || "#dffbff";
         ctx.lineWidth = 2;
         ctx.stroke();
       }
 
+      for (i = 0; i < this.haloRender.length; i += 1) {
+        var haloScreen = this.worldToScreen(this.haloRender[i].x, this.haloRender[i].y, shake);
+        ctx.save();
+        ctx.translate(haloScreen.x, haloScreen.y);
+        ctx.rotate(this.haloRender[i].angle + this.elapsedSec * 0.8);
+        ctx.strokeStyle = this.haloRender[i].color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.haloRender[i].radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = this.haloRender[i].accentColor;
+        ctx.beginPath();
+        ctx.moveTo(0, -this.haloRender[i].radius - 4);
+        ctx.lineTo(this.haloRender[i].radius + 4, 0);
+        ctx.lineTo(0, this.haloRender[i].radius + 4);
+        ctx.lineTo(-this.haloRender[i].radius - 4, 0);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+
       for (i = 0; i < this.droneRender.length; i += 1) {
         var droneScreen = this.worldToScreen(this.droneRender[i].x, this.droneRender[i].y, shake);
+        var droneVisual = this.getSkillVisual("droneBuddy");
         ctx.save();
         ctx.translate(droneScreen.x, droneScreen.y);
-        ctx.fillStyle = "#9fd4ff";
+        ctx.fillStyle = droneVisual.color;
         ctx.fillRect(-8, -8, 16, 16);
-        ctx.fillStyle = "#dff2ff";
+        ctx.fillStyle = droneVisual.accentColor || "#dff2ff";
         ctx.fillRect(-3, -3, 6, 6);
         ctx.fillStyle = "#4a5d80";
         ctx.fillRect(-12, -3, 4, 6);
@@ -3075,6 +5541,7 @@
       }
 
       var playerScreen = this.getPlayerScreenPoint(shake);
+      this.drawPassiveSkillAuras(ctx, playerScreen, moveMagnitude);
       if (this.skinDef && this.skinDef.auraColor) {
         ctx.save();
         ctx.strokeStyle = this.skinDef.auraColor;
@@ -3083,14 +5550,92 @@
         ctx.beginPath();
         ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 10 + Math.sin(this.elapsedSec * 5) * 2, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.globalAlpha = 0.1;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 18 + Math.cos(this.elapsedSec * 4.3) * 3, 0, Math.PI * 2);
+        ctx.stroke();
         if (this.skinId === "summerFestival") {
           ctx.fillStyle = "#ff9c4b";
           ctx.fillRect(playerScreen.x - 18, playerScreen.y - 40 + Math.sin(this.elapsedSec * 6) * 3, 4, 4);
           ctx.fillRect(playerScreen.x + 14, playerScreen.y - 34 + Math.cos(this.elapsedSec * 5) * 3, 4, 4);
+          ctx.strokeStyle = "#ffe0b4";
+          ctx.globalAlpha = 0.18;
+          ctx.beginPath();
+          ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 24, this.elapsedSec * 2, this.elapsedSec * 2 + Math.PI * 1.2);
+          ctx.stroke();
         } else if (this.skinId === "poolMonitor") {
           ctx.fillStyle = "#dffbff";
           ctx.fillRect(playerScreen.x - 16, playerScreen.y - 28, 3, 3);
           ctx.fillRect(playerScreen.x + 13, playerScreen.y - 24, 3, 3);
+          ctx.fillStyle = "#7fe6ff";
+          ctx.beginPath();
+          ctx.arc(playerScreen.x - 22, playerScreen.y - 18 + Math.sin(this.elapsedSec * 5.4) * 4, 2.5, 0, Math.PI * 2);
+          ctx.arc(playerScreen.x + 20, playerScreen.y - 12 + Math.cos(this.elapsedSec * 5.8) * 4, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (this.skinId === "nightPatrol") {
+          ctx.fillStyle = "#d7e5ff";
+          ctx.fillRect(playerScreen.x - 18, playerScreen.y - 36, 3, 3);
+          ctx.fillRect(playerScreen.x + 15, playerScreen.y - 31, 3, 3);
+          ctx.strokeStyle = "#8db4ff";
+          ctx.globalAlpha = 0.16;
+          ctx.beginPath();
+          ctx.moveTo(playerScreen.x - 24, playerScreen.y + 20);
+          ctx.lineTo(playerScreen.x + 24, playerScreen.y - 20);
+          ctx.stroke();
+        } else if (this.skinId === "ramuneDrive") {
+          ctx.fillStyle = "#dffef7";
+          ctx.beginPath();
+          ctx.arc(playerScreen.x - 14, playerScreen.y - 28, 3, 0, Math.PI * 2);
+          ctx.arc(playerScreen.x + 15, playerScreen.y - 24, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#7bf0d4";
+          ctx.globalAlpha = 0.18;
+          ctx.beginPath();
+          ctx.arc(playerScreen.x, playerScreen.y + 6, this.player.radius + 20, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (this.skinId === "stationMaster") {
+          ctx.fillStyle = "#f6e8c9";
+          ctx.fillRect(playerScreen.x - 18, playerScreen.y - 34, 5, 3);
+          ctx.fillRect(playerScreen.x + 12, playerScreen.y - 30, 5, 3);
+          ctx.strokeStyle = "#d4b48a";
+          ctx.globalAlpha = 0.16;
+          ctx.beginPath();
+          ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 22, this.elapsedSec * 1.6, this.elapsedSec * 1.6 + Math.PI * 0.8);
+          ctx.stroke();
+        } else if (this.skinId === "noonAwakening") {
+          ctx.strokeStyle = "#fff1c4";
+          ctx.globalAlpha = 0.22;
+          ctx.beginPath();
+          ctx.moveTo(playerScreen.x, playerScreen.y - 34);
+          ctx.lineTo(playerScreen.x, playerScreen.y - 54);
+          ctx.moveTo(playerScreen.x - 20, playerScreen.y - 18);
+          ctx.lineTo(playerScreen.x - 34, playerScreen.y - 30);
+          ctx.moveTo(playerScreen.x + 20, playerScreen.y - 18);
+          ctx.lineTo(playerScreen.x + 34, playerScreen.y - 30);
+          ctx.stroke();
+        } else if (this.skinId === "score114514") {
+          ctx.strokeStyle = "#fff1c4";
+          ctx.globalAlpha = 0.26;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(playerScreen.x, playerScreen.y + 8, this.player.radius + 28 + Math.sin(this.elapsedSec * 5.2) * 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(playerScreen.x, playerScreen.y - 44);
+          ctx.lineTo(playerScreen.x, playerScreen.y - 66);
+          ctx.moveTo(playerScreen.x - 24, playerScreen.y - 18);
+          ctx.lineTo(playerScreen.x - 40, playerScreen.y - 34);
+          ctx.moveTo(playerScreen.x + 24, playerScreen.y - 18);
+          ctx.lineTo(playerScreen.x + 40, playerScreen.y - 34);
+          ctx.moveTo(playerScreen.x - 34, playerScreen.y + 8);
+          ctx.lineTo(playerScreen.x - 54, playerScreen.y + 8);
+          ctx.moveTo(playerScreen.x + 34, playerScreen.y + 8);
+          ctx.lineTo(playerScreen.x + 54, playerScreen.y + 8);
+          ctx.stroke();
+          ctx.fillStyle = "#fff1c4";
+          ctx.fillRect(playerScreen.x - 3, playerScreen.y - 52, 6, 6);
+          ctx.fillRect(playerScreen.x - 30, playerScreen.y - 28, 5, 5);
+          ctx.fillRect(playerScreen.x + 25, playerScreen.y - 28, 5, 5);
         }
         ctx.restore();
       }
@@ -3105,6 +5650,17 @@
         walkPhase: this.elapsedSec * (8 + moveMagnitude / 60),
         border: this.playerHitTimer > 0 ? "#ffd1d6" : (this.skinDef && this.skinDef.color) || "#ffffff"
       });
+
+      var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+      ctx.fillRect(playerScreen.x - 32, playerScreen.y - 72, 64, 8);
+      ctx.strokeStyle = this.playerHitTimer > 0 ? "#ffd1d6" : "rgba(255, 255, 255, 0.28)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(playerScreen.x - 32.5, playerScreen.y - 72.5, 65, 9);
+      ctx.fillStyle = hpRatio > 0.5 ? "#88f291" : hpRatio > 0.25 ? "#f6c453" : "#ff8a70";
+      ctx.fillRect(playerScreen.x - 31, playerScreen.y - 71, 62 * hpRatio, 6);
+      ctx.restore();
 
       if (this.playerHitTimer > 0) {
         ctx.strokeStyle = "#ffd1d6";
@@ -3122,7 +5678,7 @@
     }
 
     drawBuildIcons(renderer, x, y, columns, size) {
-      var acquired = this.acquiredUpgrades.slice(0, 8);
+      var acquired = this.acquiredUpgrades.slice(0, 12);
       var i;
       for (i = 0; i < acquired.length; i += 1) {
         var col = i % columns;
@@ -3140,14 +5696,16 @@
 
     drawDesktopHud(renderer) {
       var survivorState = this.game.state.survivor || {};
-      var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
       var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
+      var nextScoreSkin = this.getNextScoreSkinUnlock();
+      var bestTimeSec = this.isInfinityMode ? (survivorState.bestEndlessTimeSec || 0) : (survivorState.bestTimeSec || 0);
       var panelX = 16;
       var panelY = 16;
       var statLines;
+      var statsStartY;
       var i;
 
-      renderer.drawPanel(panelX, panelY, 246, 252, {
+      renderer.drawPanel(panelX, panelY, 246, 332, {
         fill: "rgba(10, 10, 10, 0.9)",
         border: this.stageTheme.accent
       });
@@ -3159,56 +5717,71 @@
         size: 38,
         color: "#f4f0da"
       });
-      renderer.drawText(translate(this.game, "common.level") + " " + this.player.level + "   " + translate(this.game, "common.kills") + " " + this.player.kills, panelX + 18, panelY + 92, {
+      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), panelX + 18, panelY + 92, {
+        size: 24,
+        color: "#ffe07a"
+      });
+      renderer.drawText((this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level), panelX + 18, panelY + 118, {
         size: 18,
         color: "#f4f0da"
       });
-      renderer.drawText(translate(this.game, "common.best") + " " + formatTime(survivorState.bestTimeSec || 0), panelX + 18, panelY + 118, {
-        size: 16,
+      renderer.drawText(translate(this.game, "common.best") + " " + formatTime(bestTimeSec), panelX + 18, panelY + 140, {
+        size: 14,
         color: "#d6d0ff"
       });
-      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, panelX + 128, panelY + 118, {
+      renderer.drawText(translate(this.game, "common.bestScore") + " " + formatScore(survivorState.bestEndlessScore || 0), panelX + 18, panelY + 158, {
+        size: 14,
+        color: "#7fe6ff"
+      });
+      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, panelX + 18, panelY + 176, {
         size: 16,
         color: "#f6c453"
       });
 
-      renderer.drawText(translate(this.game, "common.hp"), panelX + 18, panelY + 146, { size: 16, color: "#ffb0a6" });
+      renderer.drawText(translate(this.game, "common.hp"), panelX + 18, panelY + 198, { size: 16, color: "#ffb0a6" });
       renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-      renderer.ctx.fillRect(panelX + 58, panelY + 150, 166, 14);
+      renderer.ctx.fillRect(panelX + 58, panelY + 202, 166, 14);
       renderer.ctx.fillStyle = "#ff8a70";
-      renderer.ctx.fillRect(panelX + 58, panelY + 150, 166 * hpRatio, 14);
+      renderer.ctx.fillRect(panelX + 58, panelY + 202, 166 * hpRatio, 14);
 
-      renderer.drawText(translate(this.game, "common.xp"), panelX + 18, panelY + 176, { size: 16, color: "#bdf5c1" });
-      renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-      renderer.ctx.fillRect(panelX + 58, panelY + 180, 166, 14);
-      renderer.ctx.fillStyle = "#88f291";
-      renderer.ctx.fillRect(panelX + 58, panelY + 180, 166 * xpRatio, 14);
+      if (!this.isInfinityMode) {
+        var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
+        renderer.drawText(translate(this.game, "common.xp"), panelX + 18, panelY + 226, { size: 16, color: "#bdf5c1" });
+        renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
+        renderer.ctx.fillRect(panelX + 58, panelY + 230, 166, 14);
+        renderer.ctx.fillStyle = "#88f291";
+        renderer.ctx.fillRect(panelX + 58, panelY + 230, 166 * xpRatio, 14);
+      }
 
+      statsStartY = this.isInfinityMode ? 226 : 254;
       statLines = [
         translate(this.game, "common.atk") + " " + this.player.damage,
         translate(this.game, "common.spd") + " " + this.player.speed,
         translate(this.game, "common.mag") + " " + this.player.pickupRange,
         translate(this.game, "common.arm") + " " + this.player.armor.toFixed(1),
-        translate(this.game, "common.phase") + " " + this.game.phaseName(this.lastPhaseId || "opening")
+        translate(this.game, "common.phase") + " " + this.game.phaseName(this.lastPhaseId || "opening"),
+        this.isInfinityMode && nextScoreSkin
+          ? translate(this.game, "store.unlockAtScore", { score: formatScore(nextScoreSkin.scoreThreshold || 0) })
+          : translate(this.game, "buttons.mode") + " " + this.getModeLabel()
       ];
       for (i = 0; i < statLines.length; i += 1) {
-        renderer.drawText(statLines[i], panelX + 18, panelY + 208 + i * 16, {
+        renderer.drawText(statLines[i], panelX + 18, panelY + statsStartY + i * 14, {
           size: 14,
-          color: i === 4 ? this.stageTheme.accent : "#d8c8a4"
+          color: i >= 4 ? this.stageTheme.accent : "#d8c8a4"
         });
       }
 
-      renderer.drawPanel(panelX, 280, 246, 164, {
+      renderer.drawPanel(panelX, 354, 246, 210, {
         fill: "rgba(10, 10, 10, 0.9)",
         border: "#5f4423"
       });
-      renderer.drawText(translate(this.game, "common.build"), panelX + 18, 296, {
+      renderer.drawText(translate(this.game, "common.build"), panelX + 18, 370, {
         size: 18,
         color: "#f4e0b6"
       });
-      this.drawBuildIcons(renderer, panelX + 18, 326, 4, 44);
+      this.drawBuildIcons(renderer, panelX + 18, 398, 4, 44);
 
-      renderer.drawPanel(278, 16, 220, 86, {
+      renderer.drawPanel(278, 16, 260, 96, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: "#5f4423"
       });
@@ -3216,17 +5789,20 @@
         size: 20,
         color: this.stageTheme.accent
       });
-      renderer.drawText(translate(this.game, "buttons.rank") + " " + this.hazardRank + " / " + translate(this.game, "common.surviveGoal"), 296, 62, {
+      renderer.drawText(translate(this.game, "buttons.mode") + " " + this.getModeLabel(), 296, 58, {
         size: 16,
         color: "#f4f0da"
+      });
+      renderer.drawText(translate(this.game, "buttons.rank") + " " + this.hazardRank + (this.isInfinityMode ? " / " + translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : " / " + translate(this.game, "common.surviveGoal")), 296, 82, {
+        size: 12,
+        color: "#d8c8a4"
       });
     }
 
     drawMobileHud(renderer) {
-      var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
       var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
 
-      renderer.drawPanel(16, 16, 456, 112, {
+      renderer.drawPanel(16, 16, 456, 132, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: this.stageTheme.accent
       });
@@ -3234,23 +5810,36 @@
         size: 34,
         color: this.stageTheme.accent
       });
-      renderer.drawText(translate(this.game, "common.level") + " " + this.player.level + "  " + translate(this.game, "common.kills") + " " + this.player.kills, 34, 66, {
+      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), 34, 62, {
+        size: 22,
+        color: "#ffe07a"
+      });
+      renderer.drawText((this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level), 34, 90, {
         size: 20,
         color: "#f4f0da"
       });
-      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, 34, 92, {
+      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, 34, 114, {
         size: 18,
         color: "#f6c453"
       });
       renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-      renderer.ctx.fillRect(260, 42, 188, 14);
-      renderer.ctx.fillRect(260, 78, 188, 14);
+      renderer.ctx.fillRect(260, 46, 188, 14);
       renderer.ctx.fillStyle = "#ff8a70";
-      renderer.ctx.fillRect(260, 42, 188 * hpRatio, 14);
-      renderer.ctx.fillStyle = "#88f291";
-      renderer.ctx.fillRect(260, 78, 188 * xpRatio, 14);
-      renderer.drawText(translate(this.game, "common.hp"), 220, 36, { size: 16, color: "#ffb0a6" });
-      renderer.drawText(translate(this.game, "common.xp"), 220, 72, { size: 16, color: "#bdf5c1" });
+      renderer.ctx.fillRect(260, 46, 188 * hpRatio, 14);
+      renderer.drawText(translate(this.game, "common.hp"), 220, 40, { size: 16, color: "#ffb0a6" });
+      if (!this.isInfinityMode) {
+        var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
+        renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
+        renderer.ctx.fillRect(260, 88, 188, 14);
+        renderer.ctx.fillStyle = "#88f291";
+        renderer.ctx.fillRect(260, 88, 188 * xpRatio, 14);
+        renderer.drawText(translate(this.game, "common.xp"), 220, 82, { size: 16, color: "#bdf5c1" });
+      } else {
+        renderer.drawText(translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }), 220, 82, {
+          size: 16,
+          color: "#ffcf8f"
+        });
+      }
     }
 
     drawMessages(renderer) {
@@ -3297,26 +5886,132 @@
       });
     }
 
-    drawEndOverlay(renderer) {
-      renderer.drawPanel(200, 214, 560, 228, {
-        fill: "rgba(5, 5, 5, 0.94)",
-        border: this.endReason === "CLEARED" ? "#88f291" : "#ff8a70"
+    drawSkinVictoryDecor(renderer, panelX, panelY, panelWidth, panelHeight) {
+      var ctx = renderer.ctx;
+      var theme = this.getSkinShowcaseTheme();
+      var cardX = panelX + panelWidth - 180;
+      var cardY = panelY + 26;
+      var spriteX = cardX + 12;
+      var spriteY = cardY + 12;
+      var name = getMetaText(this.game, this.skinDef || {}, "name");
+
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      if (theme.motif === "water" || theme.motif === "bubble") {
+        ctx.fillStyle = theme.secondary;
+        ctx.beginPath();
+        ctx.arc(cardX + 44, cardY + 36, 16, 0, Math.PI * 2);
+        ctx.arc(cardX + 118, cardY + 60, 10, 0, Math.PI * 2);
+        ctx.arc(cardX + 84, cardY + 122, 14, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (theme.motif === "spark") {
+        ctx.strokeStyle = theme.primary;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 24, cardY + 24);
+        ctx.lineTo(cardX + 44, cardY + 54);
+        ctx.lineTo(cardX + 70, cardY + 24);
+        ctx.moveTo(cardX + 122, cardY + 34);
+        ctx.lineTo(cardX + 140, cardY + 62);
+        ctx.lineTo(cardX + 158, cardY + 34);
+        ctx.stroke();
+      } else if (theme.motif === "neon") {
+        ctx.strokeStyle = theme.primary;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 18, cardY + 28);
+        ctx.lineTo(cardX + 150, cardY + 150);
+        ctx.moveTo(cardX + 42, cardY + 18);
+        ctx.lineTo(cardX + 162, cardY + 128);
+        ctx.stroke();
+      } else if (theme.motif === "brass") {
+        ctx.fillStyle = theme.primary;
+        ctx.fillRect(cardX + 24, cardY + 26, 40, 10);
+        ctx.fillRect(cardX + 118, cardY + 110, 32, 10);
+      } else {
+        ctx.strokeStyle = theme.secondary;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cardX + 86, cardY + 76, 54, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cardX + 86, cardY + 6);
+        ctx.lineTo(cardX + 86, cardY + 146);
+        ctx.moveTo(cardX + 16, cardY + 76);
+        ctx.lineTo(cardX + 156, cardY + 76);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      renderer.drawPanel(cardX, cardY, 160, 190, {
+        fill: theme.panelFill,
+        border: theme.primary
       });
-      renderer.drawCenteredText(this.endReason === "CLEARED" ? translate(this.game, "survivor.runCleared") : translate(this.game, "survivor.runOver"), 246, {
-        size: 42,
-        color: this.endReason === "CLEARED" ? "#88f291" : "#ff8a70",
+      renderer.drawPixelSprite({
+        x: spriteX,
+        y: spriteY,
+        width: 136,
+        height: 128
+      }, "senpai", {
+        variant: this.skinId,
+        moving: true,
+        walkPhase: this.elapsedSec * 4
+      });
+      renderer.drawParagraph(name, cardX + 14, cardY + 146, 132, {
+        size: 16,
+        lineHeight: 20,
+        align: "center",
+        color: "#f4f0da"
+      });
+      renderer.drawText(this.game.t("buttons.skin"), cardX + 80, cardY + 118, {
+        size: 16,
+        align: "center",
+        color: theme.secondary
+      });
+    }
+
+    drawEndOverlay(renderer) {
+      var theme = this.getSkinShowcaseTheme();
+      var panelX = 154;
+      var panelY = 188;
+      var panelWidth = 652;
+      var panelHeight = 274;
+      var titleColor = this.endReason === "CLEARED" ? "#88f291" : "#ff8a70";
+
+      renderer.drawPanel(panelX, panelY, panelWidth, panelHeight, {
+        fill: theme.panelFill,
+        border: this.endReason === "CLEARED" ? theme.primary : titleColor
+      });
+      this.drawSkinVictoryDecor(renderer, panelX, panelY, panelWidth, panelHeight);
+      renderer.drawText(this.endReason === "CLEARED" ? translate(this.game, "survivor.runCleared") : translate(this.game, "survivor.runOver"), panelX + 28, panelY + 24, {
+        size: 40,
+        color: titleColor,
         shadow: true
       });
-      renderer.drawCenteredText(
+      renderer.drawText(
         translate(this.game, "common.time") + " " + formatTime(this.elapsedSec) +
-        "  " + translate(this.game, "common.level") + " " + this.player.level +
+        "  " + (this.isInfinityMode ? translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : translate(this.game, "common.level") + " " + this.player.level) +
         "  " + translate(this.game, "common.kills") + " " + this.player.kills,
-        312,
-        { size: 24, color: "#f4f0da" }
+        panelX + 30,
+        panelY + 92,
+        { size: 22, color: "#f4f0da" }
       );
-      renderer.drawCenteredText(translate(this.game, "survivor.retryHint"), 372, {
+      renderer.drawText(
+        translate(this.game, "buttons.mode") + " " + this.getModeLabel() +
+        "  " + translate(this.game, "common.score") + " " + formatScore(this.score),
+        panelX + 30,
+        panelY + 126,
+        { size: 21, color: theme.secondary }
+      );
+      renderer.drawParagraph(translate(this.game, "survivor.retryHint"), panelX + 30, panelY + 164, 406, {
         size: 24,
+        lineHeight: 30,
         color: "#d2c7a9"
+      });
+      renderer.drawParagraph(getMetaText(this.game, this.skinDef || {}, "desc"), panelX + 30, panelY + 206, 406, {
+        size: 16,
+        lineHeight: 22,
+        color: "#f4e0b6"
       });
     }
 
@@ -3397,6 +6092,87 @@
       var panelX = 182;
       var panelY = 132;
       var i;
+      var offer;
+      var rowY;
+      var selected;
+      var hovered;
+
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+      ctx.fillRect(0, 0, ns.constants.GAME_WIDTH, ns.constants.GAME_HEIGHT);
+      ctx.restore();
+
+      renderer.drawPanel(panelX, panelY, 596, 458, {
+        fill: "rgba(30, 18, 24, 0.96)",
+        border: "#ff91d7"
+      });
+      renderer.drawText(translate(this.game, "survivor.merchantTitle"), panelX + 24, panelY + 20, {
+        size: 38,
+        color: "#ff91d7",
+        shadow: true
+      });
+      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, panelX + 420, panelY + 26, {
+        size: 24,
+        color: "#f6c453"
+      });
+      renderer.drawParagraph(translate(this.game, "survivor.merchantHint"), panelX + 24, panelY + 74, 526, {
+        size: 18,
+        lineHeight: 26,
+        color: "#f4e0b6"
+      });
+
+      renderer.drawPanel(panelX + 24, panelY + 126, 196, 268, {
+        fill: "rgba(10, 10, 10, 0.92)",
+        border: "#6a4b27"
+      });
+      renderer.drawPixelSprite({
+        x: panelX + 62,
+        y: panelY + 146,
+        width: 120,
+        height: 180
+      }, "shop", {
+        border: "#ff91d7"
+      });
+      renderer.drawText(translate(this.game, "survivor.merchantName"), panelX + 122, panelY + 334, {
+        size: 22,
+        align: "center",
+        color: "#f4f0da"
+      });
+
+      for (i = 0; i < this.merchant.offers.length; i += 1) {
+        offer = this.merchant.offers[i];
+        rowY = panelY + 126 + i * 66;
+        selected = i === this.merchant.selected;
+        hovered = i === this.merchant.hover;
+        renderer.drawPanel(panelX + 244, rowY, 498, 58, {
+          fill: selected || hovered ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.22)",
+          border: offer.soldOut ? "#5a5048" : selected ? offer.color : hovered ? "#fff1c4" : "#5f4423"
+        });
+        renderer.drawText(offer.label, panelX + 264, rowY + 12, {
+          size: 22,
+          color: offer.soldOut ? "#8d7e66" : (offer.color || "#f4f0da")
+        });
+        renderer.drawText(offer.soldOut ? translate(this.game, "common.sold") : String(offer.cost), panelX + 718, rowY + 14, {
+          size: 18,
+          align: "right",
+          color: offer.soldOut ? "#8d7e66" : "#f6c453"
+        });
+        renderer.drawText(offer.desc, panelX + 264, rowY + 34, {
+          size: 15,
+          color: "#f4e0b6"
+        });
+      }
+
+      renderer.drawPanel(650, 566, 128, 46, {
+        fill: "rgba(8, 8, 8, 0.92)",
+        border: "#d6d0ff"
+      });
+      renderer.drawText(this.game.t("buttons.leave"), 714, 578, {
+        size: 18,
+        align: "center",
+        color: "#d6d0ff"
+      });
+      return; /*
 
       ctx.save();
       ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
@@ -3473,6 +6249,7 @@
         align: "center",
         color: "#d6d0ff"
       });
+      */
     }
 
     draw(renderer) {

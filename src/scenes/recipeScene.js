@@ -27,11 +27,17 @@
     return null;
   }
 
+  function findIngredient(items, recipes, itemId) {
+    return findItem(items, itemId) || findItem(recipes, itemId);
+  }
+
   ns.RecipeScene = class {
     constructor(game, options) {
       this.game = game;
       this.options = options || game.getLaunchOptions();
-      this.recipes = game.getFusionRecipes();
+      this.baseRecipes = game.getFusionRecipes();
+      this.trueRecipes = game.getTrueFusionRecipes ? game.getTrueFusionRecipes() : [];
+      this.recipes = this.baseRecipes.concat(this.trueRecipes);
       this.items = game.getSpecialItemCatalog();
       this.selectedIndex = 0;
       this.hoverIndex = -1;
@@ -91,7 +97,7 @@
     draw(renderer) {
       var discovered = this.game.getDiscoveredRecipes();
       var recipe = this.recipes[this.selectedIndex] || this.recipes[0];
-      var isFound = discovered.indexOf(recipe.id) >= 0;
+      var isJa = this.game.getLocale() === "ja";
       var i;
 
       renderer.clear("#120c08");
@@ -99,15 +105,13 @@
         fill: "rgba(12, 8, 6, 0.96)",
         border: "#f6c453"
       });
-      renderer.drawText("EVOLUTION RECIPES", 58, 42, {
+      renderer.drawText(isJa ? "進化レシピ" : "EVOLUTION RECIPES", 58, 42, {
         size: 42,
         color: "#f6c453",
         shadow: true
       });
       renderer.drawText(
-        this.game.getLocale() === "ja"
-          ? "特殊アイテム2つで起こる合成一覧"
-          : "Two-item fusion routes for special evolutions",
+        isJa ? "特殊合成と真進化の組み合わせ一覧" : "Fusion and true evolution routes",
         58,
         92,
         { size: 20, color: "#f4e0b6" }
@@ -118,8 +122,12 @@
         var selected = i === this.selectedIndex;
         var hovered = i === this.hoverIndex;
         var rowY = 154 + i * 120;
-        var leftItem = findItem(this.items, row.ingredients[0]);
-        var rightItem = findItem(this.items, row.ingredients[1]);
+        var leftItem = findIngredient(this.items, this.baseRecipes, row.ingredients[0]);
+        var rightItem = findIngredient(this.items, this.baseRecipes, row.ingredients[1]);
+        var discoveredText = discovered.indexOf(row.id) >= 0
+          ? (isJa ? "発見済み" : "DISCOVERED")
+          : (isJa ? "未発見" : "UNDISCOVERED");
+
         renderer.drawPanel(58, rowY, 844, 102, {
           fill: selected || hovered ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.24)",
           border: selected ? row.color : hovered ? "#fff1c4" : "#5f4423"
@@ -132,17 +140,24 @@
           fill: "rgba(18, 20, 28, 0.92)",
           border: row.color
         });
-        renderer.drawText(metaText(this.game, row, "name"), 526, rowY + 26, {
-          size: 26,
+        renderer.drawText(metaText(this.game, row, "name"), 526, rowY + 24, {
+          size: 24,
           color: row.color
         });
-        renderer.drawText(isFound && row.id === recipe.id ? (this.game.getLocale() === "ja" ? "発見済み" : "DISCOVERED") : (discovered.indexOf(row.id) >= 0 ? (this.game.getLocale() === "ja" ? "発見済み" : "DISCOVERED") : (this.game.getLocale() === "ja" ? "未発見" : "UNDISCOVERED")), 864, rowY + 26, {
+        renderer.drawText(discoveredText, 864, rowY + 24, {
           size: 16,
           align: "right",
           color: discovered.indexOf(row.id) >= 0 ? "#fff1c4" : "#a39172"
         });
-        renderer.drawText(metaText(this.game, row, "result"), 526, rowY + 58, {
-          size: 16,
+        if (row.trueEvolution) {
+          renderer.drawText(isJa ? "真進化" : "TRUE", 864, rowY + 48, {
+            size: 14,
+            align: "right",
+            color: "#dffbff"
+          });
+        }
+        renderer.drawText(metaText(this.game, row, "result"), 526, rowY + 56, {
+          size: 15,
           color: "#f4e0b6"
         });
       }
@@ -165,11 +180,16 @@
         align: "center",
         color: "#d6d0ff"
       });
-      renderer.drawText(this.game.getLocale() === "ja" ? "一覧で組み合わせを確認 / X,C,Z で戻る" : "Check combo routes here / X,C,Z to go back", 478, 666, {
-        size: 18,
-        align: "center",
-        color: "#d2c7a9"
-      });
+      renderer.drawText(
+        isJa ? "ここで合成ルートと真進化条件を確認 / X,C,Z で戻る" : "Check fusion routes and true evolution paths here / X,C,Z to go back",
+        478,
+        666,
+        {
+          size: 18,
+          align: "center",
+          color: "#d2c7a9"
+        }
+      );
     }
   };
 })(window.ManatsuRPG = window.ManatsuRPG || {});
