@@ -230,3 +230,51 @@ body {
     max-height: 100dvh;
   }
 }
+
+body.mobile-portrait-game {
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  overflow: hidden;
+  background: #050505;
+}
+
+body.mobile-portrait-game .app-shell {
+  width: 100%;
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  gap: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+body.mobile-portrait-game .app-header,
+body.mobile-portrait-game .app-footer,
+body.mobile-portrait-game .ad-slot {
+  display: none;
+}
+
+body.mobile-portrait-game .game-frame {
+  flex: none;
+  width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.5625));
+  height: min(calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)), calc(100vw * 1.7777778));
+  aspect-ratio: 9 / 16;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #050505;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.mobile-portrait-game #gameCanvas {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}

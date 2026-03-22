@@ -1160,6 +1160,9 @@
     }
 
     getActionButtons() {
+      if (this.isBotMode) {
+        return [];
+      }
       var buttons = [
         { action: "language", label: this.game.getLocale().toUpperCase(), x: ns.constants.GAME_WIDTH - 418, y: 18, width: 88, height: 42, border: "#ffe07a" },
         { action: "title", label: translate(this.game, "buttons.title"), x: ns.constants.GAME_WIDTH - 316, y: 18, width: 88, height: 42, border: "#d6d0ff" },
@@ -6295,9 +6298,7 @@
       });
       this.drawBuildIcons(renderer, panelX + 18, 398, 4, 44);
 
-      if (this.isBotMode) {
-        this.drawBotBroadcastPanel(renderer, ns.constants.GAME_WIDTH - 364, 16, 348, 332);
-      } else {
+      if (!this.isBotMode) {
         renderer.drawPanel(278, 16, 260, 96, {
           fill: "rgba(10, 10, 10, 0.88)",
           border: "#5f4423"

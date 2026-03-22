@@ -4,6 +4,9 @@
     if (!canvas) {
       return;
     }
+    if (ns.applyViewportProfile) {
+      ns.applyViewportProfile(canvas);
+    }
     if (ns.Monetization && ns.Monetization.init) {
       ns.Monetization.init();
     }

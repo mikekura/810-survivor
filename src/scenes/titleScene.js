@@ -170,12 +170,30 @@
       this.game.audio.playTrack("title");
     }
 
+    isPortraitLayout() {
+      return !!(ns.constants && ns.constants.IS_MOBILE_PORTRAIT);
+    }
+
     getUnlockedRank() {
       return this.game.getUnlockedRank ? this.game.getUnlockedRank() : 0;
     }
 
     getButtons() {
       var skinCount = Math.max(1, this.skins.length);
+      if (this.isPortraitLayout()) {
+        return [
+          { type: "start", label: this.game.t("buttons.startRun"), x: 32, y: 308, width: 476, height: 62 },
+          { type: "infinity", label: this.game.t("buttons.infinity"), x: 32, y: 382, width: 476, height: 62 },
+          { type: "bot", label: this.game.t("buttons.botLive"), x: 32, y: 456, width: 476, height: 62 },
+          { type: "stage", label: this.game.stageName(STAGES[this.stageIndex].id), x: 32, y: 540, width: 144, height: 58 },
+          { type: "rank", label: String(this.rank), x: 188, y: 540, width: 84, height: 58 },
+          { type: "language", label: this.game.getLocale().toUpperCase(), x: 284, y: 540, width: 84, height: 58 },
+          { type: "skin", label: String(this.skinIndex + 1) + " / " + String(skinCount), x: 380, y: 540, width: 128, height: 58 },
+          { type: "store", label: this.game.t("buttons.store"), x: 32, y: 612, width: 144, height: 56 },
+          { type: "codex", label: this.game.t("buttons.codex"), x: 188, y: 612, width: 144, height: 56 },
+          { type: "recipes", label: this.game.t("buttons.recipes"), x: 344, y: 612, width: 164, height: 56 }
+        ];
+      }
       return [
         { type: "start", label: this.game.t("buttons.startRun"), x: 106, y: 438, width: 110, height: 70 },
         { type: "infinity", label: this.game.t("buttons.infinity"), x: 235, y: 438, width: 110, height: 70 },
@@ -271,6 +289,236 @@
       }
     }
 
+    getButtonTitleKey(buttonType) {
+      return buttonType === "start"
+        ? "buttons.action"
+        : buttonType === "infinity"
+          ? "buttons.infinity"
+          : buttonType === "bot"
+            ? "buttons.botLive"
+            : buttonType === "stage"
+              ? "buttons.stage"
+              : buttonType === "rank"
+                ? "buttons.rank"
+                : buttonType === "language"
+                  ? "buttons.language"
+                  : buttonType === "skin"
+                    ? "buttons.skin"
+                    : buttonType === "store"
+                      ? "buttons.store"
+                      : buttonType === "codex"
+                        ? "buttons.codex"
+                        : "buttons.recipes";
+    }
+
+    drawMenuButtons(renderer, buttons, pulse) {
+      var i;
+      for (i = 0; i < buttons.length; i += 1) {
+        var button = buttons[i];
+        var selected = i === this.selectedIndex;
+        var hovered = i === this.hoverIndex;
+        var titleKey = this.getButtonTitleKey(button.type);
+        renderer.drawPanel(button.x, button.y, button.width, button.height, {
+          fill: selected || hovered
+            ? "rgba(246, 196, 83, " + (0.16 + pulse * 0.14) + ")"
+            : "rgba(8, 8, 8, 0.92)",
+          border: selected ? "#f6c453" : hovered ? "#ff9c4b" : "#5f4423"
+        });
+        if (button.type !== "start" && button.type !== "infinity" && button.type !== "bot") {
+          renderer.drawText(this.game.t(titleKey), button.x + 14, button.y + 10, {
+            size: this.isPortraitLayout() ? 12 : 14,
+            color: selected ? "#fff1c4" : "#f4e0b6"
+          });
+        }
+        renderer.drawText(button.label, button.x + button.width / 2, button.type === "start" || button.type === "infinity" || button.type === "bot" ? button.y + 18 : button.y + 28, {
+          size: button.type === "start" || button.type === "infinity" || button.type === "bot"
+            ? (this.isPortraitLayout() ? 24 : (button.type === "start" ? 20 : 16))
+            : (button.width < 90 ? 15 : button.width < 110 ? 18 : 20),
+          align: "center",
+          color: "#f4f0da"
+        });
+      }
+    }
+
+    drawPortrait(renderer, pulse) {
+      var survivorState = this.game.state.survivor || {};
+      var ctx = renderer.ctx;
+      var stageName = this.game.stageName(STAGES[this.stageIndex].id);
+      var previewModeId = this.selectedIndex === 2
+        ? "bot"
+        : this.selectedIndex === 1
+          ? "infinity"
+          : this.selectedIndex === 0
+            ? "normal"
+            : this.modeIndex === 2
+              ? "bot"
+              : this.modeIndex === 1
+                ? "infinity"
+                : "normal";
+      var modeName = this.game.modeName(previewModeId);
+      var bestTimeSec = previewModeId === "normal" ? (survivorState.bestTimeSec || 0) : (survivorState.bestEndlessTimeSec || 0);
+      var unlockedRank = this.getUnlockedRank();
+      var currentSkin = this.getCurrentSkin();
+      var currentSkinOwned = currentSkin && this.game.ownsSkin && this.game.ownsSkin(currentSkin.id);
+      var currentSkinSelected = currentSkin && this.game.getSelectedSurvivorSkinId && this.game.getSelectedSurvivorSkinId() === currentSkin.id;
+      var botPreview = previewModeId === "bot" && this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(survivorState.lastBotRelayIndex || 0) : null;
+      var nextScoreSkin = this.game.getNextScoreSkinUnlock ? this.game.getNextScoreSkinUnlock(survivorState.bestEndlessScore || 0) : null;
+      var buttons = this.getButtons();
+      var guideCount = 4;
+      var i;
+
+      if (botPreview && this.game.getSurvivorSkin) {
+        currentSkin = this.game.getSurvivorSkin(botPreview.skinId) || currentSkin;
+        currentSkinOwned = true;
+        currentSkinSelected = false;
+      }
+
+      renderer.clear("#120c08");
+      renderer.drawPanel(18, 18, 504, 924, {
+        fill: "rgba(12, 8, 6, 0.98)",
+        border: "#f6c453"
+      });
+
+      renderer.drawPanel(32, 28, 476, 112, {
+        fill: "rgba(18, 12, 10, 0.94)",
+        border: "#ff9c4b"
+      });
+      renderer.drawCenteredText(this.game.t("survivor.title"), 56, {
+        size: 48,
+        color: "#f6c453",
+        shadow: true
+      });
+      renderer.drawCenteredText(this.game.t("title.subtitle"), 102, {
+        size: 18,
+        color: "#f4e0b6"
+      });
+
+      renderer.drawPanel(32, 156, 476, 128, {
+        fill: "rgba(12, 14, 22, 0.94)",
+        border: "#d6d0ff"
+      });
+      renderer.drawText(this.game.t("buttons.stage"), 52, 176, {
+        size: 14,
+        color: "#f6c453"
+      });
+      renderer.drawText(stageName, 52, 198, {
+        size: 24,
+        color: "#f4f0da"
+      });
+      renderer.drawText(this.game.t("buttons.mode") + "  " + modeName, 52, 228, {
+        size: 18,
+        color: previewModeId === "infinity" ? "#7fe6ff" : "#f4f0da"
+      });
+      renderer.drawText(this.game.t("title.rankOpen", { rank: unlockedRank }), 52, 254, {
+        size: 14,
+        color: "#ffe07a"
+      });
+
+      if (currentSkin) {
+        ctx.save();
+        ctx.strokeStyle = currentSkin.auraColor || currentSkin.color || "#d6d0ff";
+        ctx.globalAlpha = 0.2;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(426, 220, 34 + Math.sin(this.titlePulse * 4.5) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.12;
+        ctx.beginPath();
+        ctx.arc(426, 220, 44 + Math.cos(this.titlePulse * 3.8) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        renderer.drawPixelSprite({
+          x: 390,
+          y: 164,
+          width: 72,
+          height: 104
+        }, "senpai", {
+          variant: currentSkin.id,
+          moving: true,
+          walkPhase: this.titlePulse * 7,
+          border: currentSkin.color || "#ffffff"
+        });
+        renderer.drawText(botPreview
+          ? ((botPreview.name && (botPreview.name[this.game.getLocale()] || botPreview.name.en || botPreview.name.ja)) || botPreview.id)
+          : ((currentSkin.name && (currentSkin.name[this.game.getLocale()] || currentSkin.name.en || currentSkin.name.ja)) || currentSkin.id), 426, 252, {
+          size: 12,
+          align: "center",
+          color: "#f4f0da"
+        });
+        renderer.drawText(botPreview
+          ? this.game.t("modes.bot")
+          : currentSkinSelected ? this.game.t("buttons.selected") : currentSkinOwned ? this.game.t("common.owned") : this.game.t("common.locked"), 426, 270, {
+          size: 11,
+          align: "center",
+          color: botPreview ? (botPreview.color || "#9cffb8") : currentSkinSelected ? "#fff1c4" : currentSkinOwned ? "#9cffb8" : "#ff9c4b"
+        });
+      }
+
+      this.drawMenuButtons(renderer, buttons, pulse);
+
+      renderer.drawPanel(32, 690, 476, 224, {
+        fill: "rgba(22, 24, 42, 0.94)",
+        border: "#7fa2cc"
+      });
+      renderer.drawText(this.game.t("common.bestRun"), 52, 712, {
+        size: 24,
+        color: "#d6d0ff"
+      });
+      renderer.drawText(
+        this.game.t("common.time") + "  " +
+        Math.floor(bestTimeSec / 60) + ":" +
+        String(Math.floor(bestTimeSec % 60)).padStart(2, "0"),
+        52,
+        744,
+        {
+          size: 22,
+          color: "#f4f0da"
+        }
+      );
+      renderer.drawText(this.game.t("common.bestScore") + " " + ((survivorState.bestEndlessScore || 0).toLocaleString ? (survivorState.bestEndlessScore || 0).toLocaleString() : (survivorState.bestEndlessScore || 0)), 52, 772, {
+        size: 16,
+        color: "#ffe07a"
+      });
+      renderer.drawText((previewModeId !== "normal" ? this.game.t("buttons.mode") + " " + modeName : this.game.t("common.level") + " " + (survivorState.bestLevel || 1)), 52, 796, {
+        size: 16,
+        color: "#f4f0da"
+      });
+      renderer.drawText(
+        this.game.t("common.kills") + " " + (survivorState.bestKills || 0) +
+        "   " +
+        this.game.t("common.runs") + " " + (survivorState.totalRuns || 0),
+        52,
+        820,
+        {
+          size: 14,
+          color: "#d8c8a4"
+        }
+      );
+      if (nextScoreSkin) {
+        renderer.drawText(this.game.t("store.unlockAtScore", { score: nextScoreSkin.scoreThreshold.toLocaleString ? nextScoreSkin.scoreThreshold.toLocaleString() : nextScoreSkin.scoreThreshold }), 52, 842, {
+          size: 12,
+          color: "#9cffb8"
+        });
+      }
+
+      renderer.drawText(this.game.t("common.buildPicks"), 52, 872, {
+        size: 16,
+        color: "#f4e0b6"
+      });
+      for (i = 0; i < guideCount; i += 1) {
+        var row = GUIDE_ROWS[i];
+        var rowY = 884;
+        drawMiniIcon(ctx, 52 + i * 106, rowY, row.leftColor, row.leftKind);
+        renderer.drawText("+", 94 + i * 106, rowY + 8, { size: 18, color: "#fff1c4" });
+        drawMiniIcon(ctx, 114 + i * 106, rowY, row.rightColor, row.rightKind);
+      }
+
+      renderer.drawCenteredText(this.game.t("title.footerHint"), 928, {
+        size: 14,
+        color: "#d8c8a4"
+      });
+    }
+
     update(dt, input) {
       var pointer = input.getPointer();
       var buttons = this.getButtons();
@@ -362,6 +610,11 @@
         currentSkinSelected = false;
       }
 
+      if (this.isPortraitLayout()) {
+        this.drawPortrait(renderer, pulse);
+        return;
+      }
+
       renderer.clear("#120c08");
       renderer.drawPanel(44, 40, 872, 640, {
         fill: "rgba(12, 8, 6, 0.96)",
@@ -423,47 +676,7 @@
         color: previewModeId === "infinity" ? "#7fe6ff" : "#f4f0da"
       });
 
-      for (i = 0; i < buttons.length; i += 1) {
-        var button = buttons[i];
-        var selected = i === this.selectedIndex;
-        var hovered = i === this.hoverIndex;
-        var titleKey = button.type === "start"
-          ? "buttons.action"
-          : button.type === "infinity"
-            ? "buttons.infinity"
-          : button.type === "bot"
-            ? "buttons.botLive"
-          : button.type === "stage"
-            ? "buttons.stage"
-            : button.type === "rank"
-              ? "buttons.rank"
-              : button.type === "language"
-                ? "buttons.language"
-                : button.type === "skin"
-                  ? "buttons.skin"
-                : button.type === "store"
-                  ? "buttons.store"
-                : button.type === "codex"
-                  ? "buttons.codex"
-                  : "buttons.recipes";
-        renderer.drawPanel(button.x, button.y, button.width, button.height, {
-          fill: selected || hovered
-            ? "rgba(246, 196, 83, " + (0.16 + pulse * 0.14) + ")"
-            : "rgba(8, 8, 8, 0.92)",
-          border: selected ? "#f6c453" : hovered ? "#ff9c4b" : "#5f4423"
-        });
-        if (button.type !== "start" && button.type !== "infinity" && button.type !== "bot") {
-          renderer.drawText(this.game.t(titleKey), button.x + 14, button.y + 10, {
-            size: 14,
-            color: selected ? "#fff1c4" : "#f4e0b6"
-          });
-        }
-        renderer.drawText(button.label, button.x + button.width / 2, button.type === "start" || button.type === "infinity" || button.type === "bot" ? button.y + 20 : button.y + 28, {
-          size: button.type === "start" ? 20 : button.type === "infinity" || button.type === "bot" ? 16 : (button.width < 90 ? 15 : button.width < 110 ? 18 : 20),
-          align: "center",
-          color: "#f4f0da"
-        });
-      }
+      this.drawMenuButtons(renderer, buttons, pulse);
 
       renderer.drawPanel(528, 226, 354, 196, {
         fill: "rgba(12, 14, 22, 0.94)",
