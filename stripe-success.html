@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>購入完了 | 810 SURVIVOR</title>
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="game-frame" style="padding:24px;">
+      <div style="max-width:720px;margin:0 auto;">
+        <h1 style="margin-top:0;">購入ありがとうございました</h1>
+        <p id="status" style="color:var(--muted);line-height:1.8;">購入情報を確認しています...</p>
+        <p id="details" style="color:var(--muted);line-height:1.8;"></p>
+        <p>
+          <a href="./index.html" style="color:#ffe07a;">ゲームに戻る</a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./src/data/commerce.js"></script>
+  <script src="./src/core/constants.js"></script>
+  <script src="./src/core/state.js"></script>
+  <script src="./src/systems/save.js"></script>
+  <script src="./src/systems/purchaseSync.js"></script>
+  <script>
+    (function (ns) {
+      var statusEl = document.getElementById("status");
+      var detailsEl = document.getElementById("details");
+      var params = new URLSearchParams(window.location.search);
+      var sessionId = params.get("session_id") || "";
+      var state = ns.SaveSystem.load();
+      var playerId = ns.PurchaseSync.ensurePlayerId(state);
+      var serverConfig = (ns.commerceConfig && ns.commerceConfig.stripeServer) || {};
+      var baseUrl = ns.PurchaseSync.getServerBaseUrl(serverConfig);
+
+      ns.SaveSystem.save(state);
+
+      if (!baseUrl || !sessionId || !playerId) {
+        statusEl.textContent = "決済は完了しています。ゲームに戻ると同期されます。";
+        detailsEl.textContent = "Stripe サーバーか session_id が見つからないため、即時確認はスキップしました。";
+        return;
+      }
+
+      fetch(baseUrl + "/api/checkout/confirm?playerId=" + encodeURIComponent(playerId) + "&sessionId=" + encodeURIComponent(sessionId))
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error("purchase confirm failed");
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          ns.PurchaseSync.mergeOwnedSkins(state, payload.ownedSkins || []);
+          ns.SaveSystem.save(state);
+          statusEl.textContent = "購入したスキンを反映しました。";
+          detailsEl.textContent = payload.skinId
+            ? "解放スキン: " + payload.skinId
+            : "購入済みスキンを更新しました。";
+        })
+        .catch(function () {
+          statusEl.textContent = "決済は完了しています。ゲームに戻ると再同期されます。";
+          detailsEl.textContent = "Webhook 反映待ちの可能性があります。しばらくしてからゲームを開き直してください。";
+        });
+    })(window.ManatsuRPG = window.ManatsuRPG || {});
+  </script>
+</body>
+</html>

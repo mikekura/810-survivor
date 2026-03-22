@@ -10,6 +10,7 @@
       this.input = new ns.InputManager(canvas);
       this.audio = new ns.AudioSystem();
       this.state = ns.SaveSystem.load();
+      this.ensurePurchaseIdentity();
       this.sceneManager = new ns.SceneManager(this);
       this.lastTimestamp = 0;
       this.runtimeError = null;
@@ -72,19 +73,96 @@
       return ns.commerceConfig || {};
     }
 
+    getStripeServerConfig() {
+      return this.getCommerceConfig().stripeServer || {};
+    }
+
+    getStripeServerBaseUrl() {
+      return ns.PurchaseSync && ns.PurchaseSync.getServerBaseUrl
+        ? ns.PurchaseSync.getServerBaseUrl(this.getStripeServerConfig())
+        : "";
+    }
+
+    getSiteBaseUrl() {
+      var pathname = window.location.pathname || "/";
+      if (/\/index\.html?$/.test(pathname)) {
+        pathname = pathname.replace(/index\.html?$/, "");
+      } else if (!/\/$/.test(pathname)) {
+        pathname = pathname.replace(/[^/]*$/, "");
+      }
+      pathname = pathname.replace(/\/$/, "");
+      return window.location.origin + pathname;
+    }
+
+    getStripeSuccessUrl() {
+      var configured = (this.getStripeServerConfig().successUrl || "").trim();
+      if (configured) {
+        return configured;
+      }
+      return this.getSiteBaseUrl() + "/stripe-success.html";
+    }
+
+    getStripeCancelUrl() {
+      var configured = (this.getStripeServerConfig().cancelUrl || "").trim();
+      if (configured) {
+        return configured;
+      }
+      return this.getSiteBaseUrl() + "/stripe-cancel.html";
+    }
+
+    ensurePurchaseIdentity() {
+      if (ns.PurchaseSync && ns.PurchaseSync.ensurePlayerId) {
+        ns.PurchaseSync.ensurePlayerId(this.state);
+      }
+    }
+
+    getPlayerId() {
+      this.ensurePurchaseIdentity();
+      return this.state && this.state.survivor ? this.state.survivor.playerId : "";
+    }
+
     getSurvivorSkins() {
       return (ns.survivorSkins || []).slice();
+    }
+
+    getSurvivorBots() {
+      return (ns.survivorBots || []).slice();
+    }
+
+    getSurvivorBotProfile(indexOrId) {
+      var bots = this.getSurvivorBots();
+      var i;
+      if (!bots.length) {
+        return null;
+      }
+      if (typeof indexOrId === "string") {
+        for (i = 0; i < bots.length; i += 1) {
+          if (bots[i].id === indexOrId) {
+            return bots[i];
+          }
+        }
+        return bots[0];
+      }
+      i = Math.max(0, Math.floor(indexOrId || 0)) % bots.length;
+      return bots[i];
     }
 
     getSurvivorModes() {
       return [
         { id: "normal" },
-        { id: "infinity" }
+        { id: "infinity" },
+        { id: "bot" }
       ];
     }
 
     resolveSurvivorMode(modeId) {
-      return modeId === "infinity" ? "infinity" : "normal";
+      if (modeId === "infinity") {
+        return "infinity";
+      }
+      if (modeId === "bot") {
+        return "bot";
+      }
+      return "normal";
     }
 
     getSurvivorSkin(id) {
@@ -167,7 +245,7 @@
     }
 
     canPurchaseSkin(skin) {
-      return !!(skin && skin.premium && !this.isScoreUnlockSkin(skin));
+      return !!(skin && skin.premium && (this.getStripeServerBaseUrl() || this.getSkinCheckoutUrl(skin)));
     }
 
     getSkinCheckoutUrl(skinOrId) {
@@ -185,6 +263,90 @@
       }
       window.open(url, "_blank", "noopener,noreferrer");
       return true;
+    }
+
+    mergeOwnedSkins(ids) {
+      if (!ns.PurchaseSync || !ns.PurchaseSync.mergeOwnedSkins) {
+        return false;
+      }
+      var changed = ns.PurchaseSync.mergeOwnedSkins(this.state, ids);
+      if (changed) {
+        this.saveState();
+      }
+      return changed;
+    }
+
+    async syncPurchasedSkins() {
+      var baseUrl = this.getStripeServerBaseUrl();
+      var playerId = this.getPlayerId();
+      var response;
+      var payload;
+      if (!baseUrl || !playerId || typeof window.fetch !== "function") {
+        return false;
+      }
+      response = await window.fetch(baseUrl + "/api/player/skins?playerId=" + encodeURIComponent(playerId), {
+        method: "GET",
+        credentials: "omit"
+      });
+      if (!response.ok) {
+        return false;
+      }
+      payload = await response.json();
+      return this.mergeOwnedSkins(payload.ownedSkins || []);
+    }
+
+    async confirmStripeSession(sessionId) {
+      var baseUrl = this.getStripeServerBaseUrl();
+      var playerId = this.getPlayerId();
+      var response;
+      var payload;
+      if (!baseUrl || !playerId || !sessionId || typeof window.fetch !== "function") {
+        return false;
+      }
+      response = await window.fetch(
+        baseUrl + "/api/checkout/confirm?playerId=" + encodeURIComponent(playerId) + "&sessionId=" + encodeURIComponent(sessionId),
+        {
+          method: "GET",
+          credentials: "omit"
+        }
+      );
+      if (!response.ok) {
+        return false;
+      }
+      payload = await response.json();
+      return this.mergeOwnedSkins(payload.ownedSkins || []);
+    }
+
+    async startSkinCheckout(skinOrId) {
+      var skin = typeof skinOrId === "string" ? this.getSurvivorSkin(skinOrId) : skinOrId;
+      var baseUrl = this.getStripeServerBaseUrl();
+      var response;
+      var payload;
+      if (!skin) {
+        return false;
+      }
+      if (baseUrl && typeof window.fetch === "function") {
+        response = await window.fetch(baseUrl + "/api/checkout/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            skinId: skin.id,
+            playerId: this.getPlayerId(),
+            successUrl: this.getStripeSuccessUrl(),
+            cancelUrl: this.getStripeCancelUrl()
+          })
+        });
+        if (response.ok) {
+          payload = await response.json();
+          if (payload && payload.url) {
+            window.location.href = payload.url;
+            return true;
+          }
+        }
+      }
+      return this.openSkinCheckout(skin);
     }
 
     setSelectedSurvivorSkin(id) {
@@ -313,12 +475,15 @@
           0,
           this.getUnlockedRank()
         ),
-        mode: this.resolveSurvivorMode(params.get("mode") || survivorState.lastMode || "normal")
+        mode: this.resolveSurvivorMode(params.get("mode") || survivorState.lastMode || "normal"),
+        botRelayIndex: typeof survivorState.lastBotRelayIndex === "number" ? survivorState.lastBotRelayIndex : 0
       };
     }
 
     start() {
       document.documentElement.lang = this.getLocale();
+      this.saveState();
+      this.syncPurchasedSkins().catch(function () {});
       this.sceneManager.change(new ns.TitleScene(this, this.getLaunchOptions()));
       window.requestAnimationFrame((timestamp) => this.loop(timestamp));
     }
@@ -395,26 +560,40 @@
       var opts = options || {};
       var survivorState = this.state.survivor || {};
       var unlockedRank = this.getUnlockedRank();
+      var botCount = Math.max(1, this.getSurvivorBots().length);
+      var mode = this.resolveSurvivorMode(opts.mode || survivorState.lastMode || "normal");
       survivorState.lastStageId = opts.stageId || survivorState.lastStageId || "stationFront";
       survivorState.lastRank = typeof opts.hazardRank === "number"
         ? clamp(opts.hazardRank, 0, unlockedRank)
         : clamp(survivorState.lastRank || 0, 0, unlockedRank);
-      survivorState.lastMode = this.resolveSurvivorMode(opts.mode || survivorState.lastMode || "normal");
+      survivorState.lastMode = mode;
+      survivorState.lastBotRelayIndex = mode === "bot"
+        ? Math.max(0, Math.floor(typeof opts.botRelayIndex === "number" ? opts.botRelayIndex : survivorState.lastBotRelayIndex || 0)) % botCount
+        : Math.max(0, Math.floor(survivorState.lastBotRelayIndex || 0)) % botCount;
       this.state.survivor = survivorState;
       this.saveState();
       this.sceneManager.change(new ns.SurvivorScene(this, {
         stageId: survivorState.lastStageId,
         hazardRank: survivorState.lastRank,
-        mode: survivorState.lastMode
+        mode: survivorState.lastMode,
+        botRelayIndex: survivorState.lastBotRelayIndex
       }));
     }
 
-    restartSurvivor() {
+    restartSurvivor(options) {
+      var opts = options || {};
       var survivorState = this.state.survivor || {};
+      var mode = this.resolveSurvivorMode(survivorState.lastMode || "normal");
+      var botCount = Math.max(1, this.getSurvivorBots().length);
+      var botRelayIndex = Math.max(0, Math.floor(survivorState.lastBotRelayIndex || 0)) % botCount;
+      if (mode === "bot" && opts.rotateBot) {
+        botRelayIndex = (botRelayIndex + 1) % botCount;
+      }
       this.startSurvivor({
         stageId: survivorState.lastStageId || "stationFront",
         hazardRank: typeof survivorState.lastRank === "number" ? survivorState.lastRank : 0,
-        mode: this.resolveSurvivorMode(survivorState.lastMode || "normal")
+        mode: mode,
+        botRelayIndex: botRelayIndex
       });
     }
 

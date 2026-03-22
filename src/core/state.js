@@ -8,6 +8,7 @@
       return {
         locale: defaultLocale(),
         survivor: {
+          playerId: "",
           totalRuns: 0,
           bestTimeSec: 0,
           bestScore: 0,
@@ -18,6 +19,7 @@
           lastStageId: "stationFront",
           lastRank: 0,
           lastMode: "normal",
+          lastBotRelayIndex: 0,
           unlockedRank: 0,
           selectedSkin: "classicSenpai",
           ownedSkins: ["classicSenpai"],
@@ -37,6 +39,9 @@
     var normalized = Object.assign({}, defaults, state || {});
     normalized.locale = normalized.locale === "ja" ? "ja" : "en";
     normalized.survivor = Object.assign({}, defaults.survivor, normalized.survivor || {});
+    normalized.survivor.playerId = typeof normalized.survivor.playerId === "string"
+      ? normalized.survivor.playerId
+      : defaults.survivor.playerId;
     normalized.survivor.ownedSkins = Array.isArray(normalized.survivor.ownedSkins)
       ? normalized.survivor.ownedSkins
         .filter(function (id, index, list) {
@@ -66,8 +71,11 @@
     normalized.survivor.bestKills = typeof normalized.survivor.bestKills === "number" ? normalized.survivor.bestKills : 0;
     normalized.survivor.totalRuns = typeof normalized.survivor.totalRuns === "number" ? normalized.survivor.totalRuns : 0;
     normalized.survivor.lastRank = typeof normalized.survivor.lastRank === "number" ? normalized.survivor.lastRank : 0;
+    normalized.survivor.lastBotRelayIndex = typeof normalized.survivor.lastBotRelayIndex === "number" ? normalized.survivor.lastBotRelayIndex : 0;
     normalized.survivor.unlockedRank = typeof normalized.survivor.unlockedRank === "number" ? normalized.survivor.unlockedRank : 0;
-    normalized.survivor.lastMode = normalized.survivor.lastMode === "infinity" ? "infinity" : "normal";
+    normalized.survivor.lastMode = normalized.survivor.lastMode === "infinity" || normalized.survivor.lastMode === "bot"
+      ? normalized.survivor.lastMode
+      : "normal";
     normalized.totalPlayTime = typeof normalized.totalPlayTime === "number" ? normalized.totalPlayTime : 0;
     return normalized;
   };

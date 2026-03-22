@@ -1,4 +1,4 @@
-(function (ns) {
+﻿(function (ns) {
   var RUN_LENGTH_SEC = 20 * 60;
   var INFINITY_SCORE_STEP = 81000;
   var SPECIAL_SCORE_STEP = 114514;
@@ -523,8 +523,9 @@
       this.game = game;
       this.stageId = opts.stageId || "stationFront";
       this.hazardRank = typeof opts.hazardRank === "number" ? opts.hazardRank : 8;
-      this.mode = opts.mode === "infinity" ? "infinity" : "normal";
-      this.isInfinityMode = this.mode === "infinity";
+      this.mode = opts.mode === "bot" ? "bot" : opts.mode === "infinity" ? "infinity" : "normal";
+      this.isBotMode = this.mode === "bot";
+      this.isInfinityMode = this.mode === "infinity" || this.isBotMode;
       this.stageTheme = getStageTheme(this.stageId);
       theme = this.stageTheme;
       this.isTouchUi = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
@@ -563,9 +564,20 @@
       this.fusionRecipes = getFusionRecipes();
       this.trueFusionRecipes = getTrueFusionRecipes();
       this.merchantCatalog = getMerchantCatalog();
+      this.botRelayIndex = typeof opts.botRelayIndex === "number" ? Math.max(0, Math.floor(opts.botRelayIndex)) : 0;
+      this.botProfile = this.isBotMode && this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex) : null;
       this.skinId = this.game.getSelectedSurvivorSkinId ? this.game.getSelectedSurvivorSkinId() : "classicSenpai";
       this.skinDef = this.game.getSelectedSurvivorSkin ? this.game.getSelectedSurvivorSkin() : null;
+      if (this.botProfile && this.botProfile.skinId && this.game.getSurvivorSkin) {
+        this.skinId = this.botProfile.skinId;
+        this.skinDef = this.game.getSurvivorSkin(this.skinId) || this.skinDef;
+      }
       this.skinStepTimer = 0;
+      this.botState = {
+        restartTimer: 2.6,
+        wanderAngle: (this.botRelayIndex + 1) * 0.83,
+        orbitSign: this.botProfile && this.botProfile.orbitSign === -1 ? -1 : 1
+      };
       this.merchant = {
         active: false,
         open: false,
@@ -644,12 +656,20 @@
         facingAngle: -Math.PI * 0.5
       };
 
+      if (this.isBotMode) {
+        this.player.xpForNext = 8;
+      }
+
       this.refreshBuildStats(false);
       this.updateCamera(1);
       this.game.audio.playTrack("survivor");
       this.pushMessage(translate(this.game, "survivor.title"), 1.3, theme.accent);
       if (this.isInfinityMode) {
         this.pushMessage(translate(this.game, "survivor.infinityReady"), 1.4, "#7fe6ff");
+      }
+      if (this.isBotMode && this.botProfile) {
+        this.pushMessage(this.getBotName(this.botProfile), 1.6, this.botProfile.color || "#ffe07a");
+        this.pushMessage(getMetaText(this.game, this.botProfile, "intro"), 1.8, "#f4f0da");
       }
       this.pushMessage(translate(this.game, "survivor.ready"), 1.8, "#f4f0da");
     }
@@ -661,6 +681,24 @@
         maxLife: life || 1,
         color: color || "#f4f0da"
       });
+    }
+
+    getBotName(profile) {
+      return getMetaText(this.game, profile || this.botProfile || {}, "name") || "";
+    }
+
+    getBotUpgradeBonus(upgradeId) {
+      var favorites = this.botProfile && this.botProfile.favoriteUpgrades;
+      return favorites && favorites.indexOf(upgradeId) >= 0 ? 1.9 : 1;
+    }
+
+    shouldShowXpProgress() {
+      return !this.isInfinityMode || this.isBotMode;
+    }
+
+    getBotEnemyPenalty(enemyId) {
+      var hates = this.botProfile && this.botProfile.hatedEnemies;
+      return hates && hates.indexOf(enemyId) >= 0 ? 1.5 : 1;
     }
 
     getSkinFx() {
@@ -1196,11 +1234,73 @@
     }
 
     getSpawnIntensity() {
-      return Math.floor(this.score / 12000);
+      var base = Math.floor(this.score / 12000);
+      if (this.isBotMode) {
+        base += Math.floor(this.elapsedSec / 50);
+      } else if (this.isInfinityMode) {
+        base += Math.floor(this.elapsedSec / 90);
+      }
+      return base;
     }
 
     getDangerTier() {
       return this.dangerTier;
+    }
+
+    getEnemyTimeTier() {
+      if (this.isBotMode) {
+        return Math.floor(this.elapsedSec / 40);
+      }
+      if (this.isInfinityMode) {
+        return Math.floor(this.elapsedSec / 70);
+      }
+      return Math.floor(this.elapsedSec / 100);
+    }
+
+    getEnemyTimeRates() {
+      if (this.isBotMode) {
+        return {
+          hp: 1.09,
+          speed: 1.016,
+          damage: 1.055
+        };
+      }
+      if (this.isInfinityMode) {
+        return {
+          hp: 1.07,
+          speed: 1.013,
+          damage: 1.045
+        };
+      }
+      return {
+        hp: 1.05,
+        speed: 1.01,
+        damage: 1.035
+      };
+    }
+
+    getEnemyPressureSnapshot() {
+      var scoreTier = this.getSpawnIntensity();
+      var timeTier = this.getEnemyTimeTier();
+      var timeRates = this.getEnemyTimeRates();
+      var hpScale = 1 + Math.min(3.6, scoreTier * 0.07);
+      var speedScale = 1 + Math.min(0.9, scoreTier * 0.018);
+      var damageScale = 1 + Math.min(2.6, scoreTier * 0.05);
+
+      if (this.isBotMode) {
+        hpScale *= 1.08;
+        speedScale *= 1.06;
+        damageScale *= 1.08;
+      }
+
+      return {
+        scoreTier: scoreTier,
+        timeTier: timeTier,
+        hpScale: hpScale * Math.pow(timeRates.hp, timeTier),
+        speedScale: speedScale * Math.pow(timeRates.speed, timeTier),
+        damageScale: damageScale * Math.pow(timeRates.damage, timeTier),
+        level: 1 + this.hazardRank + scoreTier + timeTier
+      };
     }
 
     getNextScoreSkinUnlock() {
@@ -1208,25 +1308,50 @@
     }
 
     applyScoreScalingToEnemy(enemy) {
-      var tier = this.getSpawnIntensity();
-      var hpScale;
-      var speedScale;
-      var damageScale;
-      if (!enemy || tier <= 0) {
+      var pressure = this.getEnemyPressureSnapshot();
+      if (!enemy) {
         return enemy;
       }
-      hpScale = 1 + Math.min(3.6, tier * 0.07);
-      speedScale = 1 + Math.min(0.9, tier * 0.018);
-      damageScale = 1 + Math.min(2.6, tier * 0.05);
-      enemy.maxHp = Math.max(enemy.hp, Math.round(enemy.maxHp * hpScale));
-      enemy.hp = Math.max(1, Math.round(enemy.hp * hpScale));
-      enemy.speed *= speedScale;
+      enemy.maxHp = Math.max(enemy.hp, Math.round(enemy.maxHp * pressure.hpScale));
+      enemy.hp = Math.max(1, Math.round(enemy.hp * pressure.hpScale));
+      enemy.speed *= pressure.speedScale;
       enemy.baseSpeed = enemy.speed;
-      enemy.damage = Math.max(1, Math.round(enemy.damage * damageScale));
+      enemy.damage = Math.max(1, Math.round(enemy.damage * pressure.damageScale));
       enemy.baseDamage = enemy.damage;
-      enemy.xp = Math.max(1, Math.round(enemy.xp * (1 + Math.min(1.8, tier * 0.03))));
-      enemy.scoreTier = tier;
+      enemy.xp = Math.max(1, Math.round(enemy.xp * (1 + Math.min(1.8, pressure.scoreTier * 0.03 + pressure.timeTier * 0.04))));
+      enemy.scoreTier = pressure.scoreTier;
+      enemy.baseLevel = pressure.level - pressure.timeTier;
+      enemy.level = pressure.level;
+      enemy.timeTierApplied = pressure.timeTier;
       return enemy;
+    }
+
+    applyTimePressureToEnemy(enemy) {
+      var targetTier;
+      var currentTier;
+      var timeRates;
+      var hpRatio;
+      var i;
+      if (!enemy) {
+        return;
+      }
+      targetTier = this.getEnemyTimeTier();
+      currentTier = enemy.timeTierApplied || 0;
+      if (targetTier <= currentTier) {
+        return;
+      }
+      timeRates = this.getEnemyTimeRates();
+      for (i = currentTier; i < targetTier; i += 1) {
+        hpRatio = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 1;
+        enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * timeRates.hp));
+        enemy.hp = Math.max(1, Math.round(enemy.maxHp * clamp(hpRatio, 0.08, 1)));
+        enemy.speed *= timeRates.speed;
+        enemy.baseSpeed = enemy.speed;
+        enemy.damage = Math.max(1, Math.round(enemy.damage * timeRates.damage));
+        enemy.baseDamage = enemy.damage;
+      }
+      enemy.timeTierApplied = targetTier;
+      enemy.level = Math.max(1, (enemy.baseLevel || enemy.level || 1) + targetTier);
     }
 
     getDangerWaveEnemyIds() {
@@ -1293,7 +1418,7 @@
         }
       }
 
-      unlockedSkins = this.game.unlockScoreSkins ? this.game.unlockScoreSkins(nextScore) : [];
+      unlockedSkins = this.isBotMode ? [] : (this.game.unlockScoreSkins ? this.game.unlockScoreSkins(nextScore) : []);
       for (i = 0; i < unlockedSkins.length; i += 1) {
         var skin = unlockedSkins[i];
         var skinName = getMetaText(this.game, skin, "name");
@@ -1934,12 +2059,148 @@
       this.camera.y = lerp(this.camera.y, targetY, follow);
     }
 
+    getBotPickupTarget() {
+      var best = null;
+      var bestScore = -Infinity;
+      var hpRatio = this.player.hp / Math.max(1, this.player.maxHp);
+      var i;
+
+      for (i = 0; i < this.pickups.length; i += 1) {
+        var pickup = this.pickups[i];
+        var dist = pointDistance(this.player.x, this.player.y, pickup.x, pickup.y);
+        var priority = 0;
+        if (pickup.kind === "chest") {
+          priority = 240;
+        } else if (pickup.kind === "heal") {
+          priority = hpRatio < 0.6 ? 300 : 90;
+        } else if (pickup.kind === "magnet") {
+          priority = 170;
+        } else if (pickup.kind === "xp") {
+          priority = 115 + Math.min(60, (pickup.xp || 1) * 8);
+        } else if (pickup.kind !== "xp") {
+          priority = 190;
+        }
+        if (priority <= 0) {
+          continue;
+        }
+        priority *= this.botProfile ? (this.botProfile.pickupBias || 0.7) + 0.35 : 1;
+        priority -= dist * 0.42;
+        if (priority > bestScore) {
+          best = pickup;
+          bestScore = priority;
+        }
+      }
+
+      return best;
+    }
+
+    getBotPrimaryEnemy() {
+      var best = null;
+      var bestScore = -Infinity;
+      var i;
+      for (i = 0; i < this.enemies.length; i += 1) {
+        var enemy = this.enemies[i];
+        var dist = pointDistance(this.player.x, this.player.y, enemy.x, enemy.y);
+        var score = (enemy.category === "boss" ? 420 : enemy.category === "elite" ? 260 : 140) - dist;
+        score *= this.getBotEnemyPenalty(enemy.archetypeId || "");
+        if (score > bestScore) {
+          best = enemy;
+          bestScore = score;
+        }
+      }
+      return best;
+    }
+
+    getBotMoveVector() {
+      var moveX = 0;
+      var moveY = 0;
+      var profile = this.botProfile || {};
+      var pickupTarget = this.getBotPickupTarget();
+      var primaryEnemy = this.getBotPrimaryEnemy();
+      var preferredRange = profile.preferredRange || 180;
+      var avoidRange = profile.avoidRange || Math.max(96, preferredRange * 0.64);
+      var strafeWeight = profile.strafeWeight || 0.55;
+      var projectileFear = profile.projectileFear || 0.65;
+      var crowdFear = profile.crowdFear || 0.65;
+      var i;
+
+      if (pickupTarget) {
+        var pickupDirection = normalize(pickupTarget.x - this.player.x, pickupTarget.y - this.player.y);
+        moveX += pickupDirection.x * ((profile.pickupBias || 0.7) + 0.2);
+        moveY += pickupDirection.y * ((profile.pickupBias || 0.7) + 0.2);
+      }
+
+      if (primaryEnemy) {
+        var enemyDirection = normalize(primaryEnemy.x - this.player.x, primaryEnemy.y - this.player.y);
+        var enemyDistance = enemyDirection.length;
+        if (enemyDistance > preferredRange + 42) {
+          moveX += enemyDirection.x * 0.92;
+          moveY += enemyDirection.y * 0.92;
+        } else if (enemyDistance < avoidRange) {
+          moveX -= enemyDirection.x * 1.26;
+          moveY -= enemyDirection.y * 1.26;
+        }
+        moveX += -enemyDirection.y * strafeWeight * (this.botState.orbitSign || 1);
+        moveY += enemyDirection.x * strafeWeight * (this.botState.orbitSign || 1);
+      } else {
+        this.botState.wanderAngle += 0.018;
+        moveX += Math.cos(this.botState.wanderAngle) * 0.72;
+        moveY += Math.sin(this.botState.wanderAngle * 0.9) * 0.72;
+      }
+
+      for (i = 0; i < this.enemies.length; i += 1) {
+        var enemy = this.enemies[i];
+        var dist = pointDistance(this.player.x, this.player.y, enemy.x, enemy.y);
+        if (dist <= 0 || dist > 240) {
+          continue;
+        }
+        var penalty = enemy.category === "boss" ? 1.25 : enemy.category === "elite" ? 0.9 : 0.5;
+        penalty *= crowdFear * (1 + (240 - dist) / 240);
+        penalty *= this.getBotEnemyPenalty(enemy.archetypeId || "");
+        moveX -= ((enemy.x - this.player.x) / dist) * penalty;
+        moveY -= ((enemy.y - this.player.y) / dist) * penalty;
+      }
+
+      for (i = 0; i < this.enemyProjectiles.length; i += 1) {
+        var shot = this.enemyProjectiles[i];
+        var shotDist = pointDistance(this.player.x, this.player.y, shot.x, shot.y);
+        if (shotDist <= 0 || shotDist > 170) {
+          continue;
+        }
+        moveX -= ((shot.x - this.player.x) / shotDist) * projectileFear * (1 + (170 - shotDist) / 170);
+        moveY -= ((shot.y - this.player.y) / shotDist) * projectileFear * (1 + (170 - shotDist) / 170);
+      }
+
+      if (this.player.hp / Math.max(1, this.player.maxHp) < 0.32) {
+        moveX *= 1.08;
+        moveY *= 1.08;
+      }
+
+      moveX += Math.cos(this.elapsedSec * 1.8 + this.botRelayIndex * 0.9) * 0.18;
+      moveY += Math.sin(this.elapsedSec * 1.4 + this.botRelayIndex * 1.1) * 0.16;
+
+      var length = Math.sqrt(moveX * moveX + moveY * moveY);
+      if (length <= 0.001) {
+        return { x: 0, y: 0, intensity: 0 };
+      }
+
+      return {
+        x: moveX / length,
+        y: moveY / length,
+        intensity: clamp(length * 0.92, 0.52, 0.94)
+      };
+    }
+
     getMoveVector(input) {
       var axis = input.getAxis();
       var pointer = input.getPointer();
       var playerScreen;
       var mouseDirection;
       var touchDirection;
+
+      if (this.isBotMode) {
+        return this.getBotMoveVector();
+      }
 
       if (axis.x || axis.y) {
         return { x: axis.x, y: axis.y, intensity: 1 };
@@ -3413,8 +3674,8 @@
     }
 
     awardXp(amount, x, y) {
-      var gained = Math.max(1, Math.round(amount * this.player.xpGainMultiplier));
-      if (this.isInfinityMode) {
+      var gained = Math.max(1, Math.round(amount * this.player.xpGainMultiplier * (this.isBotMode ? 1.95 : 1)));
+      if (this.isInfinityMode && !this.isBotMode) {
         return 0;
       }
       this.player.xp += gained;
@@ -3427,7 +3688,7 @@
       while (this.player.xp >= this.player.xpForNext) {
         this.player.xp -= this.player.xpForNext;
         this.player.level += 1;
-        this.player.xpForNext = Math.round(this.player.xpForNext * 1.28 + 7);
+        this.player.xpForNext = Math.round(this.player.xpForNext * (this.isBotMode ? 1.18 : 1.28) + (this.isBotMode ? 4 : 7));
         this.pendingLevelUps += 1;
         this.effects.spawnLevelUp(this.player.x, this.player.y - 18, translate(this.game, "common.levelUp"));
         this.pushMessage(translate(this.game, "survivor.levelLabel", { level: this.player.level }), 1.1, "#9ee4ff");
@@ -3724,7 +3985,10 @@
         if (level >= def.maxLevel) {
           continue;
         }
-        available.push({ id: upgradeId, weight: def.weight * (level === 0 ? 1.12 : 1.32) });
+        available.push({
+          id: upgradeId,
+          weight: def.weight * (level === 0 ? 1.12 : 1.32) * this.getBotUpgradeBonus(upgradeId)
+        });
       }
 
       while (available.length && result.length < 3) {
@@ -3760,19 +4024,6 @@
         1.3,
         "#f6c453"
       );
-      /*
-      this.pushMessage(this.game.getLocale() === "ja" ? "最大強化: コイン +" + coinReward : "MAX BUILD: +" + coinReward + " coins", 1.3, "#f6c453");
-      return; /*
-      this.pushMessage(
-        this.game.getLocale() === "ja"
-          ? "強化最大: コイン補填 +" + coinReward
-          : "MAX BUILD: +" + coinReward + " coins",
-        1.3,
-        "#f6c453"
-      );
-    }
-
-      */
     }
 
     openLevelUpChoices() {
@@ -3783,7 +4034,31 @@
       }
       this.levelUpSelected = 0;
       this.levelUpHover = -1;
+      if (this.isBotMode) {
+        this.levelUpSelected = this.pickBotLevelUpChoice();
+        this.botState.levelUpTimer = 0.36;
+      }
       this.pointerCapturedByUi = true;
+    }
+
+    pickBotLevelUpChoice() {
+      var bestIndex = 0;
+      var bestWeight = -Infinity;
+      var i;
+      if (!this.levelUpChoices || !this.levelUpChoices.length) {
+        return 0;
+      }
+      for (i = 0; i < this.levelUpChoices.length; i += 1) {
+        var upgradeId = this.levelUpChoices[i];
+        var def = UPGRADE_CATALOG[upgradeId] || { weight: 1 };
+        var level = this.getUpgradeLevel(upgradeId);
+        var weight = def.weight * this.getBotUpgradeBonus(upgradeId) - level * 0.2;
+        if (weight > bestWeight) {
+          bestWeight = weight;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
     }
 
     applyUpgrade(upgradeId) {
@@ -3814,7 +4089,7 @@
       }
     }
 
-    handleLevelUpInput(input) {
+    handleLevelUpInput(input, dt) {
       var pointer = input.getPointer();
       var cardX = ns.constants.GAME_WIDTH - LEVELUP_CARD_WIDTH - 74;
       var cardY = 164;
@@ -3825,6 +4100,14 @@
         return;
       }
       this.levelUpHover = -1;
+
+      if (this.isBotMode) {
+        this.botState.levelUpTimer = Math.max(0, (this.botState.levelUpTimer || 0) - (dt || 0));
+        if (this.botState.levelUpTimer <= 0) {
+          this.confirmLevelUpChoice(this.levelUpSelected);
+        }
+        return;
+      }
 
       if (pointer.inside) {
         for (i = 0; i < this.levelUpChoices.length; i += 1) {
@@ -4165,10 +4448,14 @@
           : 0;
       var magnetChance = enemy.category === "boss" ? (0.08 + luckBoost) : enemy.category === "elite" ? (0.02 + luckBoost * 0.4) : 0;
 
-      if (!this.isInfinityMode) {
+      if (!this.isInfinityMode || this.isBotMode) {
+        var xpMultiplier = this.isBotMode ? 1.55 : 1;
         this.createPickup("xp", enemy.x, enemy.y, {
           radius: enemy.category === "boss" ? 10 : enemy.category === "elite" ? 8 : 7,
-          xp: enemy.category === "boss" ? enemy.xp + 12 : enemy.category === "elite" ? enemy.xp + 6 : enemy.xp,
+          xp: Math.max(
+            1,
+            Math.round((enemy.category === "boss" ? enemy.xp + 14 : enemy.category === "elite" ? enemy.xp + 8 : enemy.xp) * xpMultiplier)
+          ),
           color: enemy.category === "boss" ? "#f6c453" : enemy.category === "elite" ? "#ffb86f" : "#88f291"
         });
       }
@@ -4424,6 +4711,7 @@
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         enemy = this.enemies[i];
+        this.applyTimePressureToEnemy(enemy);
         toPlayer = normalize(this.player.x - enemy.x, this.player.y - enemy.y);
         moveScale = 1;
         velocityX = toPlayer.x;
@@ -4886,7 +5174,7 @@
       }
       this.runEnded = true;
       this.endReason = reason;
-      unlockedSkins = this.game.unlockScoreSkins ? this.game.unlockScoreSkins(this.score) : [];
+      unlockedSkins = this.isBotMode ? [] : (this.game.unlockScoreSkins ? this.game.unlockScoreSkins(this.score) : []);
       survivorState.totalRuns = (survivorState.totalRuns || 0) + 1;
       survivorState.bestTimeSec = Math.max(survivorState.bestTimeSec || 0, Math.floor(this.elapsedSec));
       survivorState.bestScore = Math.max(survivorState.bestScore || 0, Math.floor(this.score));
@@ -4920,6 +5208,21 @@
       }
       if (unlockedSkins.length && this.game.audio && this.game.audio.playPickupCue) {
         this.game.audio.playPickupCue("chest");
+      }
+      if (this.isBotMode) {
+        this.botState.restartTimer = 2.6;
+        if (this.botProfile) {
+          this.pushMessage(getMetaText(this.game, this.botProfile, "defeat"), 1.5, this.botProfile.color || "#ff9c4b");
+        }
+        if (this.game.getSurvivorBots && this.game.getSurvivorBots().length > 1) {
+          this.pushMessage(
+            translate(this.game, "survivor.botNext", {
+              bot: this.getBotName(this.game.getSurvivorBotProfile(this.botRelayIndex + 1))
+            }),
+            1.7,
+            "#7fe6ff"
+          );
+        }
       }
     }
 
@@ -4961,7 +5264,7 @@
       }
 
       if (this.levelUpChoices) {
-        this.handleLevelUpInput(input);
+        this.handleLevelUpInput(input, dt);
         this.effects.update(dt * 0.3);
         this.updateMessages(dt);
         this.updateBeamFx(dt * 0.3);
@@ -4980,7 +5283,13 @@
         this.effects.update(dt);
         this.updateMessages(dt);
         this.updateBeamFx(dt);
-        if ((input.wasPressed("confirm") || input.wasPointerPressed()) && !this.pointerCapturedByUi) {
+        if (this.isBotMode) {
+          this.botState.restartTimer -= dt;
+          if (this.botState.restartTimer <= 0) {
+            this.game.restartSurvivor({ rotateBot: true });
+            return;
+          }
+        } else if ((input.wasPressed("confirm") || input.wasPointerPressed()) && !this.pointerCapturedByUi) {
           this.game.restartSurvivor();
         }
         return;
@@ -5005,7 +5314,7 @@
       if (nextStageShift !== this.stageShiftIndex) {
         this.stageShiftIndex = nextStageShift;
         this.effects.flashScreen(this.getLiveStageTheme().accent, 0.08, 0.14);
-        this.pushMessage(this.game.getLocale() === "ja" ? "ステージ変化" : "STAGE SHIFT", 1.1, this.getLiveStageTheme().accent);
+        this.pushMessage(translate(this.game, "survivor.stageShift"), 1.1, this.getLiveStageTheme().accent);
       }
       this.updatePlayer(dt, input);
       this.updateCamera(dt);
@@ -5694,11 +6003,216 @@
       }
     }
 
+    drawBotRelayPanel(renderer, x, y, width, compact) {
+      var profile = this.botProfile;
+      var nextBot = this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex + 1) : null;
+      var totalBots = this.game.getSurvivorBots ? this.game.getSurvivorBots().length : 1;
+      var favorite = profile && profile.favoriteUpgrades && profile.favoriteUpgrades.length
+        ? this.game.upgradeName(profile.favoriteUpgrades[0])
+        : "-";
+      var avoid = profile && profile.hatedEnemies && profile.hatedEnemies.length
+        ? this.game.enemyName(profile.hatedEnemies[0])
+        : "-";
+
+      if (!this.isBotMode || !profile) {
+        return;
+      }
+
+      renderer.drawPanel(x, y, width, compact ? 84 : 122, {
+        fill: "rgba(12, 14, 22, 0.9)",
+        border: profile.color || "#7fe6ff"
+      });
+      renderer.drawText(translate(this.game, "survivor.botRelay", {
+        index: (this.botRelayIndex % Math.max(1, totalBots)) + 1,
+        total: totalBots,
+        bot: this.getBotName(profile)
+      }), x + 16, y + 14, {
+        size: compact ? 16 : 18,
+        color: profile.color || "#7fe6ff"
+      });
+      renderer.drawText(getMetaText(this.game, profile, "tone"), x + 16, y + (compact ? 40 : 42), {
+        size: compact ? 12 : 14,
+        color: "#f4f0da"
+      });
+      if (!compact) {
+        renderer.drawText(translate(this.game, "common.favorite") + " " + favorite, x + 16, y + 72, {
+          size: 13,
+          color: "#ffe07a"
+        });
+        renderer.drawText(translate(this.game, "common.avoid") + " " + avoid, x + 16, y + 92, {
+          size: 13,
+          color: "#ff9c9c"
+        });
+        renderer.drawText(translate(this.game, "survivor.botNext", {
+          bot: nextBot ? this.getBotName(nextBot) : "-"
+        }), x + 16, y + 108, {
+          size: 12,
+          color: "#d6d0ff"
+        });
+      }
+    }
+
+    drawBotBroadcastPanel(renderer, x, y, width, height) {
+      var profile = this.botProfile;
+      var nextBot = this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex + 1) : null;
+      var totalBots = this.game.getSurvivorBots ? this.game.getSurvivorBots().length : 1;
+      var pressure = this.getEnemyPressureSnapshot();
+      var favorite = profile && profile.favoriteUpgrades && profile.favoriteUpgrades.length
+        ? this.game.upgradeName(profile.favoriteUpgrades[0])
+        : "-";
+      var avoid = profile && profile.hatedEnemies && profile.hatedEnemies.length
+        ? this.game.enemyName(profile.hatedEnemies[0])
+        : "-";
+      var rightX;
+      var progressWidth;
+      var i;
+
+      if (!this.isBotMode || !profile) {
+        return;
+      }
+
+      renderer.drawPanel(x, y, width, height, {
+        fill: "rgba(8, 10, 18, 0.93)",
+        border: profile.color || "#7fe6ff"
+      });
+
+      renderer.drawPanel(x + 16, y + 16, width - 144, 78, {
+        fill: "rgba(255,255,255,0.04)",
+        border: "rgba(255,255,255,0.12)"
+      });
+      renderer.drawText("BOT LIVE", x + 30, y + 30, {
+        size: 14,
+        color: profile.color || "#7fe6ff"
+      });
+      renderer.drawText(this.getBotName(profile), x + 30, y + 54, {
+        size: 28,
+        color: "#f4f0da"
+      });
+      renderer.drawText(getMetaText(this.game, profile, "tone"), x + 30, y + 78, {
+        size: 14,
+        color: "#d8c8a4"
+      });
+
+      renderer.drawPixelSprite({
+        x: x + width - 118,
+        y: y + 12,
+        width: 90,
+        height: 130
+      }, "senpai", {
+        variant: profile.skinId || this.skinId,
+        moving: true,
+        walkPhase: this.elapsedSec * 5,
+        border: profile.color || "#7fe6ff"
+      });
+
+      renderer.drawPanel(x + 16, y + 108, width - 32, 66, {
+        fill: "rgba(255,255,255,0.03)",
+        border: "#5f4423"
+      });
+      renderer.drawText(translate(this.game, "common.time") + " " + formatTime(this.elapsedSec), x + 30, y + 126, {
+        size: 22,
+        color: this.stageTheme.accent
+      });
+      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), x + 30, y + 152, {
+        size: 22,
+        color: "#ffe07a"
+      });
+      renderer.drawText(translate(this.game, "common.level") + " " + this.player.level, x + width - 156, y + 126, {
+        size: 20,
+        color: "#9ee4ff"
+      });
+      renderer.drawText(translate(this.game, "common.kills") + " " + this.player.kills, x + width - 156, y + 152, {
+        size: 18,
+        color: "#f4f0da"
+      });
+
+      renderer.drawText(this.game.stageName(this.stageId), x + 18, y + 188, {
+        size: 16,
+        color: this.stageTheme.accent
+      });
+      renderer.drawText(translate(this.game, "buttons.mode") + " " + this.getModeLabel(), x + 18, y + 208, {
+        size: 14,
+        color: "#f4f0da"
+      });
+      renderer.drawText(translate(this.game, "survivor.botRelay", {
+        index: (this.botRelayIndex % Math.max(1, totalBots)) + 1,
+        total: totalBots,
+        bot: this.getBotName(profile)
+      }), x + 18, y + 228, {
+        size: 14,
+        color: profile.color || "#7fe6ff"
+      });
+      renderer.drawText(translate(this.game, "survivor.botNext", {
+        bot: nextBot ? this.getBotName(nextBot) : "-"
+      }), x + 18, y + 248, {
+        size: 14,
+        color: "#d6d0ff"
+      });
+
+      rightX = x + Math.floor(width * 0.5);
+      renderer.drawText(translate(this.game, "common.favorite") + " " + favorite, rightX, y + 188, {
+        size: 14,
+        color: "#ffe07a"
+      });
+      renderer.drawText(translate(this.game, "common.avoid") + " " + avoid, rightX, y + 208, {
+        size: 14,
+        color: "#ff9c9c"
+      });
+      renderer.drawText(
+        translate(this.game, "common.level") + " " + pressure.level + " / " + translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }),
+        rightX,
+        y + 228,
+        {
+          size: 14,
+          color: "#ffcf8f"
+        }
+      );
+      renderer.drawText("HP x" + pressure.hpScale.toFixed(2) + " / SPD x" + pressure.speedScale.toFixed(2), rightX, y + 248, {
+        size: 14,
+        color: "#9ee4ff"
+      });
+      renderer.drawText("DMG x" + pressure.damageScale.toFixed(2) + " / T+" + pressure.timeTier, rightX, y + 268, {
+        size: 14,
+        color: "#f4f0da"
+      });
+
+      for (i = 0; i < Math.min(3, profile.favoriteUpgrades.length); i += 1) {
+        drawUpgradeIcon(renderer.ctx, profile.favoriteUpgrades[i], x + 18 + i * 42, y + 260, 34);
+      }
+
+      progressWidth = width - 32;
+      renderer.ctx.fillStyle = "rgba(255,255,255,0.06)";
+      renderer.ctx.fillRect(x + 16, y + height - 22, progressWidth, 8);
+      renderer.ctx.fillStyle = profile.color || "#7fe6ff";
+      renderer.ctx.fillRect(
+        x + 16,
+        y + height - 22,
+        progressWidth * Math.min(1, (this.botState.restartTimer ? 2.6 - this.botState.restartTimer : 2.6) / 2.6),
+        8
+      );
+      if (this.runEnded) {
+        renderer.drawText(translate(this.game, "survivor.botAutoRetry", {
+          time: (this.botState.restartTimer || 0).toFixed(1)
+        }), x + 18, y + height - 40, {
+          size: 14,
+          color: "#ffb86f"
+        });
+      } else {
+        renderer.drawText(translate(this.game, "survivor.botLiveHint"), x + 18, y + height - 40, {
+          size: 14,
+          color: "#d8c8a4"
+        });
+      }
+    }
+
     drawDesktopHud(renderer) {
       var survivorState = this.game.state.survivor || {};
       var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
-      var nextScoreSkin = this.getNextScoreSkinUnlock();
+      var nextScoreSkin = this.isBotMode ? null : this.getNextScoreSkinUnlock();
       var bestTimeSec = this.isInfinityMode ? (survivorState.bestEndlessTimeSec || 0) : (survivorState.bestTimeSec || 0);
+      var primaryStatText = this.isBotMode
+        ? translate(this.game, "common.level") + " " + this.player.level + "   " + translate(this.game, "common.kills") + " " + this.player.kills
+        : (this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level);
       var panelX = 16;
       var panelY = 16;
       var statLines;
@@ -5721,7 +6235,7 @@
         size: 24,
         color: "#ffe07a"
       });
-      renderer.drawText((this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level), panelX + 18, panelY + 118, {
+      renderer.drawText(primaryStatText, panelX + 18, panelY + 118, {
         size: 18,
         color: "#f4f0da"
       });
@@ -5744,7 +6258,7 @@
       renderer.ctx.fillStyle = "#ff8a70";
       renderer.ctx.fillRect(panelX + 58, panelY + 202, 166 * hpRatio, 14);
 
-      if (!this.isInfinityMode) {
+      if (this.shouldShowXpProgress()) {
         var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
         renderer.drawText(translate(this.game, "common.xp"), panelX + 18, panelY + 226, { size: 16, color: "#bdf5c1" });
         renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
@@ -5753,7 +6267,7 @@
         renderer.ctx.fillRect(panelX + 58, panelY + 230, 166 * xpRatio, 14);
       }
 
-      statsStartY = this.isInfinityMode ? 226 : 254;
+      statsStartY = this.shouldShowXpProgress() ? 254 : 226;
       statLines = [
         translate(this.game, "common.atk") + " " + this.player.damage,
         translate(this.game, "common.spd") + " " + this.player.speed,
@@ -5781,28 +6295,37 @@
       });
       this.drawBuildIcons(renderer, panelX + 18, 398, 4, 44);
 
-      renderer.drawPanel(278, 16, 260, 96, {
-        fill: "rgba(10, 10, 10, 0.88)",
-        border: "#5f4423"
-      });
-      renderer.drawText(this.game.stageName(this.stageId), 296, 30, {
-        size: 20,
-        color: this.stageTheme.accent
-      });
-      renderer.drawText(translate(this.game, "buttons.mode") + " " + this.getModeLabel(), 296, 58, {
-        size: 16,
-        color: "#f4f0da"
-      });
-      renderer.drawText(translate(this.game, "buttons.rank") + " " + this.hazardRank + (this.isInfinityMode ? " / " + translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : " / " + translate(this.game, "common.surviveGoal")), 296, 82, {
-        size: 12,
-        color: "#d8c8a4"
-      });
+      if (this.isBotMode) {
+        this.drawBotBroadcastPanel(renderer, ns.constants.GAME_WIDTH - 364, 16, 348, 332);
+      } else {
+        renderer.drawPanel(278, 16, 260, 96, {
+          fill: "rgba(10, 10, 10, 0.88)",
+          border: "#5f4423"
+        });
+        renderer.drawText(this.game.stageName(this.stageId), 296, 30, {
+          size: 20,
+          color: this.stageTheme.accent
+        });
+        renderer.drawText(translate(this.game, "buttons.mode") + " " + this.getModeLabel(), 296, 58, {
+          size: 16,
+          color: "#f4f0da"
+        });
+        renderer.drawText(translate(this.game, "buttons.rank") + " " + this.hazardRank + (this.isInfinityMode ? " / " + translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : " / " + translate(this.game, "common.surviveGoal")), 296, 82, {
+          size: 12,
+          color: "#d8c8a4"
+        });
+        this.drawBotRelayPanel(renderer, 278, 124, 260, false);
+      }
     }
 
     drawMobileHud(renderer) {
       var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
+      var showXp = this.shouldShowXpProgress();
+      var primaryStatText = this.isBotMode
+        ? translate(this.game, "common.level") + " " + this.player.level + "   " + translate(this.game, "common.kills") + " " + this.player.kills
+        : (this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level);
 
-      renderer.drawPanel(16, 16, 456, 132, {
+      renderer.drawPanel(16, 16, 456, this.isBotMode ? 188 : 132, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: this.stageTheme.accent
       });
@@ -5814,7 +6337,7 @@
         size: 22,
         color: "#ffe07a"
       });
-      renderer.drawText((this.isInfinityMode ? translate(this.game, "common.kills") : translate(this.game, "common.level")) + " " + (this.isInfinityMode ? this.player.kills : this.player.level), 34, 90, {
+      renderer.drawText(primaryStatText, 34, 90, {
         size: 20,
         color: "#f4f0da"
       });
@@ -5827,7 +6350,7 @@
       renderer.ctx.fillStyle = "#ff8a70";
       renderer.ctx.fillRect(260, 46, 188 * hpRatio, 14);
       renderer.drawText(translate(this.game, "common.hp"), 220, 40, { size: 16, color: "#ffb0a6" });
-      if (!this.isInfinityMode) {
+      if (showXp) {
         var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
         renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
         renderer.ctx.fillRect(260, 88, 188, 14);
@@ -5839,6 +6362,9 @@
           size: 16,
           color: "#ffcf8f"
         });
+      }
+      if (this.isBotMode) {
+        this.drawBotRelayPanel(renderer, 16, 152, 456, true);
       }
     }
 
@@ -5856,9 +6382,11 @@
     }
 
     drawControlsHint(renderer) {
-      var hint = this.isTouchUi
-        ? translate(this.game, "survivor.touchHint")
-        : translate(this.game, "survivor.desktopHint");
+      var hint = this.isBotMode
+        ? translate(this.game, "survivor.botLiveHint")
+        : this.isTouchUi
+          ? translate(this.game, "survivor.touchHint")
+          : translate(this.game, "survivor.desktopHint");
       renderer.drawText(hint, ns.constants.GAME_WIDTH * 0.5, ns.constants.GAME_HEIGHT - 34, {
         size: this.isTouchUi ? 20 : 18,
         align: "center",
@@ -5977,6 +6505,7 @@
       var panelWidth = 652;
       var panelHeight = 274;
       var titleColor = this.endReason === "CLEARED" ? "#88f291" : "#ff8a70";
+      var nextBot = this.isBotMode && this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex + 1) : null;
 
       renderer.drawPanel(panelX, panelY, panelWidth, panelHeight, {
         fill: theme.panelFill,
@@ -5990,7 +6519,11 @@
       });
       renderer.drawText(
         translate(this.game, "common.time") + " " + formatTime(this.elapsedSec) +
-        "  " + (this.isInfinityMode ? translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : translate(this.game, "common.level") + " " + this.player.level) +
+        "  " + (this.isBotMode
+          ? translate(this.game, "common.level") + " " + this.player.level
+          : this.isInfinityMode
+            ? translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() })
+            : translate(this.game, "common.level") + " " + this.player.level) +
         "  " + translate(this.game, "common.kills") + " " + this.player.kills,
         panelX + 30,
         panelY + 92,
@@ -6008,7 +6541,21 @@
         lineHeight: 30,
         color: "#d2c7a9"
       });
-      renderer.drawParagraph(getMetaText(this.game, this.skinDef || {}, "desc"), panelX + 30, panelY + 206, 406, {
+      if (this.isBotMode) {
+        renderer.drawText(translate(this.game, "survivor.botAutoRetry", {
+          time: Math.max(0, this.botState.restartTimer).toFixed(1)
+        }), panelX + 30, panelY + 198, {
+          size: 18,
+          color: "#7fe6ff"
+        });
+        renderer.drawText(translate(this.game, "survivor.botNext", {
+          bot: nextBot ? this.getBotName(nextBot) : "-"
+        }), panelX + 30, panelY + 224, {
+          size: 16,
+          color: "#d6d0ff"
+        });
+      }
+      renderer.drawParagraph(getMetaText(this.game, this.skinDef || {}, "desc"), panelX + 30, panelY + (this.isBotMode ? 246 : 206), 406, {
         size: 16,
         lineHeight: 22,
         color: "#f4e0b6"

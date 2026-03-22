@@ -74,6 +74,10 @@
       return !!(skin && skin.unlockType === "score");
     }
 
+    canPurchase(skin) {
+      return !!(skin && this.game.canPurchaseSkin && this.game.canPurchaseSkin(skin));
+    }
+
     getListMetrics() {
       if (this.skins.length > 10) {
         return {
@@ -141,22 +145,34 @@
         this.game.setSelectedSurvivorSkin(skin.id);
         return;
       }
-      if (this.isScoreUnlock(skin)) {
+      if (this.isScoreUnlock(skin) && !this.canPurchase(skin)) {
         return;
       }
       this.openPurchaseDialog(skin);
     }
 
     confirmPurchase() {
+      var target;
       if (!this.purchaseTarget) {
         return;
       }
-      if (this.game.openSkinCheckout && this.game.openSkinCheckout(this.purchaseTarget)) {
-        this.setNotice(this.game.t("store.checkoutOpened"), this.purchaseTarget.color || "#ff91d7");
-      } else {
-        this.setNotice(this.game.t("store.checkoutMissing"), "#ff8a70");
-      }
+      target = this.purchaseTarget;
       this.closePurchaseDialog();
+      Promise.resolve(
+        this.game.startSkinCheckout
+          ? this.game.startSkinCheckout(target)
+          : (this.game.openSkinCheckout && this.game.openSkinCheckout(target))
+      )
+        .then((opened) => {
+          if (opened) {
+            this.setNotice(this.game.t("store.checkoutOpened"), target.color || "#ff91d7");
+          } else {
+            this.setNotice(this.game.t("store.checkoutMissing"), "#ff8a70");
+          }
+        })
+        .catch(() => {
+          this.setNotice(this.game.t("store.checkoutMissing"), "#ff8a70");
+        });
     }
 
     update(dt, input) {
@@ -250,6 +266,7 @@
       var current = this.getCurrentSkin();
       var owned = this.isOwned(current);
       var equipped = this.isSelected(current);
+      var buyable = this.canPurchase(current);
       var primaryButton = this.getPrimaryButton();
       var backButton = this.getBackButton();
       var metrics = this.getListMetrics();
@@ -307,6 +324,8 @@
             ? this.game.t("buttons.selected")
             : rowOwned
               ? this.game.t("common.owned")
+              : this.canPurchase(skin)
+                ? this.game.t("buttons.buy")
               : this.isScoreUnlock(skin)
                 ? this.game.t("store.scoreGoal", {
                   score: (skin.scoreThreshold || 0).toLocaleString ? (skin.scoreThreshold || 0).toLocaleString() : (skin.scoreThreshold || 0)
@@ -419,7 +438,7 @@
         color: "#d8c8a4"
       });
       renderer.drawParagraph(
-        owned ? this.game.t("store.hint") : this.isScoreUnlock(current) ? this.game.t("store.scoreLockedHint") : this.game.t("store.lockedHint"),
+        owned ? this.game.t("store.hint") : this.isScoreUnlock(current) && !buyable ? this.game.t("store.scoreLockedHint") : this.game.t("store.lockedHint"),
         420,
         528,
         438,
@@ -445,7 +464,9 @@
       renderer.drawText(
         owned
           ? (equipped ? this.game.t("buttons.selected") : this.game.t("buttons.equip"))
-          : this.isScoreUnlock(current)
+          : buyable
+            ? this.game.t("buttons.buy")
+            : this.isScoreUnlock(current)
             ? this.game.t("store.scoreGoal", {
               score: (current && current.scoreThreshold || 0).toLocaleString ? (current && current.scoreThreshold || 0).toLocaleString() : (current && current.scoreThreshold || 0)
             })
@@ -453,7 +474,7 @@
         primaryButton.x + primaryButton.width / 2,
         primaryButton.y + 18,
         {
-          size: this.isScoreUnlock(current) ? 22 : 28,
+          size: this.isScoreUnlock(current) && !buyable ? 22 : 28,
           align: "center",
           color: "#f4f0da"
         }
