@@ -36,11 +36,14 @@
       topContainer.hidden = !topSlot;
       bottomContainer.hidden = !bottomSlot;
 
-      script = document.createElement("script");
-      script.async = true;
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(publisherId);
-      script.crossOrigin = "anonymous";
-      document.head.appendChild(script);
+      script = document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]');
+      if (!script) {
+        script = document.createElement("script");
+        script.async = true;
+        script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(publisherId);
+        script.crossOrigin = "anonymous";
+        document.head.appendChild(script);
+      }
 
       if (topSlot) {
         topContainer.innerHTML = "";
@@ -51,7 +54,7 @@
         bottomContainer.appendChild(createAdUnit(publisherId, bottomSlot, true));
       }
 
-      script.addEventListener("load", function () {
+      function initializeAds() {
         if (!window.adsbygoogle) {
           return;
         }
@@ -61,7 +64,16 @@
         if (bottomSlot) {
           window.adsbygoogle.push({});
         }
-      });
+      }
+
+      if (script.getAttribute("data-codex-ads-ready") === "true" || script.readyState === "complete") {
+        initializeAds();
+      } else {
+        script.addEventListener("load", function () {
+          script.setAttribute("data-codex-ads-ready", "true");
+          initializeAds();
+        }, { once: true });
+      }
     }
   };
 })(window.ManatsuRPG = window.ManatsuRPG || {});

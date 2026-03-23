@@ -25,7 +25,7 @@
     // publisherId example: "ca-pub-1234567890123456"
     // slot example: "1234567890"
     adsense: {
-      publisherId: "",
+      publisherId: "ca-pub-4337254889610557",
       topSlot: "",
       bottomSlot: "",
       autoAds: false
