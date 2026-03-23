@@ -27,13 +27,26 @@
       this.game.audio.playTrack("title");
     }
 
+    isPortraitLayout() {
+      return !!(ns.constants && ns.constants.IS_MOBILE_PORTRAIT);
+    }
+
     getBackButton() {
+      if (this.isPortraitLayout()) {
+        return { x: 390, y: 26, width: 122, height: 42 };
+      }
       return { x: 760, y: 42, width: 150, height: 52 };
+    }
+
+    getRowRect(index) {
+      if (this.isPortraitLayout()) {
+        return { x: 34, y: 118 + index * 60, width: 472, height: 52 };
+      }
+      return { x: 70, y: 154 + index * 90, width: 256, height: 72 };
     }
 
     update(dt, input) {
       var pointer = input.getPointer();
-      var listTop = 150;
       var i;
       var backButton = this.getBackButton();
 
@@ -46,7 +59,7 @@
         }
 
         for (i = 0; i < this.items.length; i += 1) {
-          var rect = { x: 58, y: listTop + i * 90, width: 278, height: 76 };
+          var rect = this.getRowRect(i);
           if (pointInRect(pointer, rect)) {
             this.hoverIndex = i;
             this.selectedIndex = i;
@@ -87,6 +100,20 @@
       var isFound = discovered.indexOf(current.id) >= 0;
       var foundCount = 0;
       var i;
+      var isPortrait = this.isPortraitLayout();
+      var outerX = isPortrait ? 16 : 34;
+      var outerY = isPortrait ? 16 : 28;
+      var outerW = isPortrait ? 508 : 892;
+      var outerH = isPortrait ? 928 : 664;
+      var listX = isPortrait ? 24 : 56;
+      var listY = isPortrait ? 100 : 138;
+      var listW = isPortrait ? 492 : 284;
+      var listH = isPortrait ? 336 : 518;
+      var detailX = isPortrait ? 24 : 368;
+      var detailY = isPortrait ? 454 : 138;
+      var detailW = isPortrait ? 492 : 530;
+      var detailH = isPortrait ? 474 : 518;
+      var backButton = this.getBackButton();
 
       for (i = 0; i < this.items.length; i += 1) {
         if (discovered.indexOf(this.items[i].id) >= 0) {
@@ -95,12 +122,12 @@
       }
 
       renderer.clear("#120c08");
-      renderer.drawPanel(34, 28, 892, 664, {
+      renderer.drawPanel(outerX, outerY, outerW, outerH, {
         fill: "rgba(12, 8, 6, 0.96)",
         border: "#f6c453"
       });
-      renderer.drawText("ITEM CODEX", 58, 42, {
-        size: 44,
+      renderer.drawText("ITEM CODEX", isPortrait ? 30 : 58, isPortrait ? 28 : 42, {
+        size: isPortrait ? 32 : 44,
         color: "#f6c453",
         shadow: true
       });
@@ -108,83 +135,83 @@
         this.game.getLocale() === "ja"
           ? "一度拾った特殊アイテムの効果と入手元"
           : "Effects and sources of special items you've found",
-        58,
-        92,
-        { size: 20, color: "#f4e0b6" }
+        isPortrait ? 30 : 58,
+        isPortrait ? 62 : 92,
+        { size: isPortrait ? 14 : 20, color: "#f4e0b6" }
       );
-      renderer.drawText(foundCount + " / " + this.items.length, 306, 42, {
-        size: 24,
+      renderer.drawText(foundCount + " / " + this.items.length, isPortrait ? 330 : 306, isPortrait ? 28 : 42, {
+        size: isPortrait ? 18 : 24,
         color: "#d6d0ff"
       });
 
-      renderer.drawPanel(56, 138, 284, 518, {
+      renderer.drawPanel(listX, listY, listW, listH, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: "#6a4b27"
       });
       for (i = 0; i < this.items.length; i += 1) {
         var item = this.items[i];
-        var rowY = 154 + i * 90;
+        var rowRect = this.getRowRect(i);
         var discoveredItem = discovered.indexOf(item.id) >= 0;
         var selected = i === this.selectedIndex;
         var hovered = i === this.hoverIndex;
-        renderer.drawPanel(70, rowY, 256, 72, {
+        renderer.drawPanel(rowRect.x, rowRect.y, rowRect.width, rowRect.height, {
           fill: selected || hovered ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.22)",
           border: selected ? item.color : hovered ? "#fff1c4" : "#5f4423"
         });
-        this.drawIcon(renderer, 82, rowY + 8, item, discoveredItem);
-        renderer.drawText(discoveredItem ? metaText(this.game, item, "name") : "LOCKED", 150, rowY + 12, {
-          size: 22,
+        this.drawIcon(renderer, rowRect.x + 10, rowRect.y + (isPortrait ? -2 : 8), item, discoveredItem);
+        renderer.drawText(discoveredItem ? metaText(this.game, item, "name") : "LOCKED", rowRect.x + 76, rowRect.y + (isPortrait ? 8 : 12), {
+          size: isPortrait ? 16 : 22,
           color: discoveredItem ? "#f4f0da" : "#8d7e66"
         });
-        renderer.drawText(discoveredItem ? metaText(this.game, item, "source") : (this.game.getLocale() === "ja" ? "未発見" : "Not found yet"), 150, rowY + 42, {
-          size: 15,
+        renderer.drawText(discoveredItem ? metaText(this.game, item, "source") : (this.game.getLocale() === "ja" ? "未発見" : "Not found yet"), rowRect.x + 76, rowRect.y + (isPortrait ? 28 : 42), {
+          size: isPortrait ? 11 : 15,
           color: discoveredItem ? "#d8c8a4" : "#776854"
         });
       }
 
-      renderer.drawPanel(368, 138, 530, 518, {
+      renderer.drawPanel(detailX, detailY, detailW, detailH, {
         fill: "rgba(18, 20, 28, 0.94)",
         border: current.color || "#d6d0ff"
       });
-      this.drawIcon(renderer, 398, 172, current, isFound);
-      renderer.drawText(isFound ? metaText(this.game, current, "name") : "LOCKED", 476, 178, {
-        size: 34,
+      this.drawIcon(renderer, isPortrait ? 42 : 398, isPortrait ? 478 : 172, current, isFound);
+      renderer.drawText(isFound ? metaText(this.game, current, "name") : "LOCKED", isPortrait ? 124 : 476, isPortrait ? 484 : 178, {
+        size: isPortrait ? 24 : 34,
         color: isFound ? (current.color || "#f4f0da") : "#8d7e66"
       });
-      renderer.drawText(isFound ? metaText(this.game, current, "source") : (this.game.getLocale() === "ja" ? "エリートかボスから見つけよう" : "Find it from elite or boss enemies"), 398, 252, {
-        size: 20,
+      renderer.drawText(isFound ? metaText(this.game, current, "source") : (this.game.getLocale() === "ja" ? "エリートかボスから見つけよう" : "Find it from elite or boss enemies"), isPortrait ? 42 : 398, isPortrait ? 552 : 252, {
+        size: isPortrait ? 16 : 20,
         color: "#f4e0b6"
       });
-      renderer.drawText(this.game.getLocale() === "ja" ? "概要" : "Summary", 398, 306, {
-        size: 20,
+      renderer.drawText(this.game.getLocale() === "ja" ? "概要" : "Summary", isPortrait ? 42 : 398, isPortrait ? 598 : 306, {
+        size: isPortrait ? 18 : 20,
         color: "#d6d0ff"
       });
-      renderer.drawParagraph(isFound ? metaText(this.game, current, "desc") : (this.game.getLocale() === "ja" ? "まだ図鑑に登録されていない特殊アイテムです。" : "This special item has not been registered in the codex yet."), 398, 338, 452, {
-        size: 20,
-        lineHeight: 30,
+      renderer.drawParagraph(isFound ? metaText(this.game, current, "desc") : (this.game.getLocale() === "ja" ? "まだ図鑑に登録されていない特殊アイテムです。" : "This special item has not been registered in the codex yet."), isPortrait ? 42 : 398, isPortrait ? 628 : 338, isPortrait ? 440 : 452, {
+        size: isPortrait ? 16 : 20,
+        lineHeight: isPortrait ? 22 : 30,
         color: "#f4f0da"
       });
-      renderer.drawText(this.game.getLocale() === "ja" ? "効果" : "Effect", 398, 444, {
-        size: 20,
+      renderer.drawText(this.game.getLocale() === "ja" ? "効果" : "Effect", isPortrait ? 42 : 398, isPortrait ? 744 : 444, {
+        size: isPortrait ? 18 : 20,
         color: "#d6d0ff"
       });
-      renderer.drawParagraph(isFound ? metaText(this.game, current, "effect") : (this.game.getLocale() === "ja" ? "拾うとここに詳細が表示される。" : "Pick it up once to reveal the full effect here."), 398, 476, 452, {
-        size: 20,
-        lineHeight: 30,
+      renderer.drawParagraph(isFound ? metaText(this.game, current, "effect") : (this.game.getLocale() === "ja" ? "拾うとここに詳細が表示される。" : "Pick it up once to reveal the full effect here."), isPortrait ? 42 : 398, isPortrait ? 774 : 476, isPortrait ? 440 : 452, {
+        size: isPortrait ? 16 : 20,
+        lineHeight: isPortrait ? 22 : 30,
         color: "#f4f0da"
       });
 
-      renderer.drawPanel(760, 42, 150, 52, {
+      renderer.drawPanel(backButton.x, backButton.y, backButton.width, backButton.height, {
         fill: "rgba(8, 8, 8, 0.88)",
         border: "#d6d0ff"
       });
-      renderer.drawText(this.game.t("buttons.back"), 835, 56, {
-        size: 22,
+      renderer.drawText(this.game.t("buttons.back"), backButton.x + backButton.width / 2, backButton.y + 12, {
+        size: isPortrait ? 18 : 22,
         align: "center",
         color: "#d6d0ff"
       });
-      renderer.drawText(this.game.getLocale() === "ja" ? "上下キーまたはクリックで選択 / X,C で戻る" : "Click or Up/Down to browse / X,C to go back", 480, 666, {
-        size: 18,
+      renderer.drawText(this.game.getLocale() === "ja" ? "タップまたは上下キーで選択 / X,C で戻る" : "Tap or Up/Down to browse / X,C to go back", isPortrait ? 270 : 480, isPortrait ? 914 : 666, {
+        size: isPortrait ? 14 : 18,
         align: "center",
         color: "#d2c7a9"
       });

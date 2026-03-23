@@ -39,7 +39,15 @@
     haloSigil: { color: "#d7c8ff", maxLevel: 5, weight: 5 },
     summerSword: { color: "#ffe7a6", maxLevel: 5, weight: 6 },
     breakerAxe: { color: "#ffc38f", maxLevel: 5, weight: 5 },
-    mysticWand: { color: "#c9b2ff", maxLevel: 5, weight: 6 }
+    mysticWand: { color: "#c9b2ff", maxLevel: 5, weight: 6 },
+    thunderChain: { color: "#b8c7ff", maxLevel: 5, weight: 5 },
+    blizzardFan: { color: "#9feeff", maxLevel: 5, weight: 5 },
+    crossLance: { color: "#ffc68f", maxLevel: 5, weight: 5 },
+    boomerangDisc: { color: "#ffe07a", maxLevel: 5, weight: 5 },
+    petalStorm: { color: "#ff9fd6", maxLevel: 5, weight: 5 },
+    cometTrail: { color: "#9fc8ff", maxLevel: 5, weight: 5 },
+    vitalBloom: { color: "#9cffb8", maxLevel: 4, weight: 4 },
+    overclockLoop: { color: "#ffd28a", maxLevel: 4, weight: 4 }
   };
 
   function clamp(value, min, max) {
@@ -361,6 +369,68 @@
         ctx.closePath();
         ctx.fill();
         break;
+      case "thunderChain":
+        ctx.beginPath();
+        ctx.moveTo(left + inner * 0.24, top + inner * 0.16);
+        ctx.lineTo(left + inner * 0.52, top + inner * 0.16);
+        ctx.lineTo(left + inner * 0.4, top + inner * 0.44);
+        ctx.lineTo(left + inner * 0.66, top + inner * 0.44);
+        ctx.lineTo(left + inner * 0.3, top + inner * 0.86);
+        ctx.lineTo(left + inner * 0.42, top + inner * 0.58);
+        ctx.lineTo(left + inner * 0.22, top + inner * 0.58);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "blizzardFan":
+        ctx.beginPath();
+        ctx.moveTo(centerX, top + inner * 0.12);
+        ctx.lineTo(left + inner * 0.82, top + inner * 0.82);
+        ctx.lineTo(left + inner * 0.18, top + inner * 0.82);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "crossLance":
+        ctx.fillRect(left + inner * 0.45, top + inner * 0.12, inner * 0.1, inner * 0.76);
+        ctx.fillRect(left + inner * 0.12, top + inner * 0.45, inner * 0.76, inner * 0.1);
+        break;
+      case "boomerangDisc":
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, inner * 0.28, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX + inner * 0.16, centerY, inner * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case "petalStorm":
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - inner * 0.18, inner * 0.12, 0, Math.PI * 2);
+        ctx.arc(centerX + inner * 0.18, centerY, inner * 0.12, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY + inner * 0.18, inner * 0.12, 0, Math.PI * 2);
+        ctx.arc(centerX - inner * 0.18, centerY, inner * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case "cometTrail":
+        ctx.beginPath();
+        ctx.moveTo(left + inner * 0.18, top + inner * 0.72);
+        ctx.lineTo(left + inner * 0.76, top + inner * 0.14);
+        ctx.lineTo(left + inner * 0.86, top + inner * 0.28);
+        ctx.lineTo(left + inner * 0.28, top + inner * 0.86);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case "vitalBloom":
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, inner * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, inner * 0.38, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      case "overclockLoop":
+        ctx.fillRect(left + inner * 0.24, top + inner * 0.24, inner * 0.18, inner * 0.52);
+        ctx.fillRect(left + inner * 0.58, top + inner * 0.24, inner * 0.18, inner * 0.52);
+        ctx.fillRect(left + inner * 0.18, top + inner * 0.46, inner * 0.64, inner * 0.1);
+        break;
       case "afterimageStep":
         ctx.fillRect(left + inner * 0.18, top + inner * 0.54, inner * 0.46, inner * 0.12);
         ctx.fillRect(left + inner * 0.28, top + inner * 0.34, inner * 0.36, inner * 0.1);
@@ -638,6 +708,14 @@
         swordLevel: 0,
         axeLevel: 0,
         wandLevel: 0,
+        thunderLevel: 0,
+        blizzardLevel: 0,
+        crossLevel: 0,
+        boomerangLevel: 0,
+        petalLevel: 0,
+        cometTrailLevel: 0,
+        vitalBloomLevel: 0,
+        overclockLevel: 0,
         pulseCooldown: 1.2,
         beamCooldown: 2.0,
         droneCooldown: 0.45,
@@ -647,12 +725,19 @@
         swordCooldown: 0.22,
         axeCooldown: 0.72,
         wandCooldown: 0.4,
+        thunderCooldown: 0.7,
+        blizzardCooldown: 0.6,
+        crossCooldown: 0.8,
+        boomerangCooldown: 0.9,
+        petalCooldown: 1.1,
+        cometTrailCooldown: 1.2,
         xpGainMultiplier: 1,
         specialCooldownFactor: 1,
         frenzyTimer: 0,
         shieldTimer: 0,
         loveAuraTimer: 0,
         loveAuraPulse: 0.6,
+        vitalBloomPulse: 0.75,
         facingAngle: -Math.PI * 0.5
       };
 
@@ -853,6 +938,54 @@
         case "yarimasuNee":
           profile = this.getWeaponVisual("sword");
           break;
+        case "thunderChain":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#b8c7ff";
+          profile.trailColor = "#e8ecff";
+          profile.accentColor = "#7fa7ff";
+          break;
+        case "blizzardFan":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#9feeff";
+          profile.trailColor = "#dffcff";
+          profile.accentColor = "#74d6ff";
+          break;
+        case "crossLance":
+          profile = this.getWeaponVisual("sword");
+          profile.color = "#ffc68f";
+          profile.trailColor = "#ffe4be";
+          profile.accentColor = "#ff9c4b";
+          break;
+        case "boomerangDisc":
+          profile = this.getWeaponVisual("axe");
+          profile.color = "#ffe07a";
+          profile.trailColor = "#fff1c4";
+          profile.accentColor = "#ffc768";
+          break;
+        case "petalStorm":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#ff9fd6";
+          profile.trailColor = "#ffe0f2";
+          profile.accentColor = "#ff7fb3";
+          break;
+        case "cometTrail":
+          profile = this.getWeaponVisual("axe");
+          profile.color = "#9fc8ff";
+          profile.trailColor = "#d7e5ff";
+          profile.accentColor = "#7fa7ff";
+          break;
+        case "vitalBloom":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#9cffb8";
+          profile.trailColor = "#e6fff0";
+          profile.accentColor = "#7edb98";
+          break;
+        case "overclockLoop":
+          profile = this.getWeaponVisual("axe");
+          profile.color = "#ffd28a";
+          profile.trailColor = "#fff1c4";
+          profile.accentColor = "#ffb86f";
+          break;
         default:
           profile = this.getWeaponVisual("wand");
           profile.color = this.getSkinShotVisual("bullet", profile.color).color;
@@ -871,7 +1004,7 @@
 
       this.spawnWeaponMotifFx(x, y, visual, power);
 
-      if (skillId === "sunbeam810" || skillId === "meteorCall") {
+      if (skillId === "sunbeam810" || skillId === "meteorCall" || skillId === "cometTrail" || skillId === "thunderChain") {
         this.effects.spawnRadialStreakBurst(x, y, {
           count: 7 + Math.floor(power * 2),
           speedMin: 44,
@@ -882,7 +1015,7 @@
           length: 14 + power * 4,
           drag: 0.84
         });
-      } else if (skillId === "summerPulse" || skillId === "haloSigil" || skillId === "pickupAura") {
+      } else if (skillId === "summerPulse" || skillId === "haloSigil" || skillId === "pickupAura" || skillId === "petalStorm" || skillId === "vitalBloom") {
         this.effects.spawnRing(x, y, {
           color: visual.color,
           radius: ringRadius,
@@ -891,7 +1024,7 @@
           life: 0.18,
           fillAlpha: 0.07
         });
-      } else if (skillId === "quickStep" || skillId === "afterimageStep" || skillId === "backstepVolley") {
+      } else if (skillId === "quickStep" || skillId === "afterimageStep" || skillId === "backstepVolley" || skillId === "blizzardFan" || skillId === "crossLance" || skillId === "boomerangDisc" || skillId === "overclockLoop") {
         this.effects.spawnStreak(x, y, -Math.cos(angle) * (70 + power * 24), -Math.sin(angle) * (70 + power * 24), {
           life: 0.18,
           color: visual.trailColor,
@@ -1162,6 +1295,23 @@
     getActionButtons() {
       if (this.isBotMode) {
         return [];
+      }
+      if (ns.constants.IS_MOBILE_PORTRAIT) {
+        var compactButtons = [];
+        var width = this.merchant.active && !this.merchant.open && !this.runEnded ? 84 : 104;
+        var gap = 8;
+        var total = this.merchant.active && !this.merchant.open && !this.runEnded ? 5 : 4;
+        var startX = Math.floor((ns.constants.GAME_WIDTH - (total * width + (total - 1) * gap)) * 0.5);
+        var y = ns.constants.GAME_HEIGHT - 72;
+        if (this.merchant.active && !this.merchant.open && !this.runEnded) {
+          compactButtons.push({ action: "shop", label: "SHOP", x: startX, y: y, width: width, height: 40, border: "#ff91d7" });
+          startX += width + gap;
+        }
+        compactButtons.push({ action: "language", label: this.game.getLocale().toUpperCase(), x: startX, y: y, width: width, height: 40, border: "#ffe07a" });
+        compactButtons.push({ action: "title", label: translate(this.game, "buttons.title"), x: startX + (width + gap), y: y, width: width, height: 40, border: "#d6d0ff" });
+        compactButtons.push({ action: "restart", label: translate(this.game, "buttons.retry"), x: startX + (width + gap) * 2, y: y, width: width, height: 40, border: "#ff8a70" });
+        compactButtons.push({ action: "pause", label: this.paused ? translate(this.game, "buttons.go") : translate(this.game, "buttons.pause"), x: startX + (width + gap) * 3, y: y, width: width, height: 40, border: "#7fe6ff" });
+        return compactButtons;
       }
       var buttons = [
         { action: "language", label: this.game.getLocale().toUpperCase(), x: ns.constants.GAME_WIDTH - 418, y: 18, width: 88, height: 42, border: "#ffe07a" },
@@ -1713,6 +1863,9 @@
         fillAlpha: 0.08
       });
       this.pushMessage(translate(this.game, "survivor.merchantArrived"), 1.5, "#ff91d7");
+      if (this.isBotMode) {
+        this.autoResolveMerchant();
+      }
     }
 
     closeMerchantShop() {
@@ -1730,6 +1883,63 @@
       this.merchant.hover = -1;
       this.pointerCapturedByUi = true;
       this.pushMessage(translate(this.game, "survivor.merchantOpen"), 1, "#ff91d7");
+      if (this.isBotMode) {
+        this.autoResolveMerchant();
+      }
+    }
+
+    getMerchantOfferPriority(offer) {
+      var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 1;
+      if (!offer || offer.soldOut || this.player.coins < offer.cost) {
+        return -1;
+      }
+      if (offer.kind === "fusion") {
+        return 140;
+      }
+      if (offer.kind === "special") {
+        return 120;
+      }
+      if (offer.pickupKind === "chest") {
+        return 110;
+      }
+      if (offer.pickupKind === "heal") {
+        return hpRatio <= 0.62 ? 130 : 50;
+      }
+      if (offer.pickupKind === "magnet") {
+        return 90;
+      }
+      return 40;
+    }
+
+    selectBotMerchantOffer() {
+      var bestIndex = -1;
+      var bestPriority = -1;
+      var i;
+      for (i = 0; i < this.merchant.offers.length; i += 1) {
+        var priority = this.getMerchantOfferPriority(this.merchant.offers[i]);
+        if (priority > bestPriority) {
+          bestPriority = priority;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
+    }
+
+    autoResolveMerchant() {
+      var buyCount = 0;
+      var nextIndex;
+      if (!this.isBotMode || !this.merchant.open) {
+        return;
+      }
+      while (buyCount < 2) {
+        nextIndex = this.selectBotMerchantOffer();
+        if (nextIndex < 0) {
+          break;
+        }
+        this.buyMerchantOffer(nextIndex);
+        buyCount += 1;
+      }
+      this.closeMerchantShop();
     }
 
     applyFusionResult(recipeId) {
@@ -1958,6 +2168,14 @@
       var swordLevel = this.getUpgradeLevel("summerSword");
       var axeLevel = this.getUpgradeLevel("breakerAxe");
       var wandLevel = this.getUpgradeLevel("mysticWand");
+      var thunderLevel = this.getUpgradeLevel("thunderChain");
+      var blizzardLevel = this.getUpgradeLevel("blizzardFan");
+      var crossLevel = this.getUpgradeLevel("crossLance");
+      var boomerangLevel = this.getUpgradeLevel("boomerangDisc");
+      var petalLevel = this.getUpgradeLevel("petalStorm");
+      var cometTrailLevel = this.getUpgradeLevel("cometTrail");
+      var vitalBloomLevel = this.getUpgradeLevel("vitalBloom");
+      var overclockLevel = this.getUpgradeLevel("overclockLoop");
       var fusionBurst = !!this.activeFusions.burstVacation;
       var fusionGentle = !!this.activeFusions.gentleWave;
       var fusionNova = !!this.activeFusions.vacuumNova;
@@ -1965,10 +2183,10 @@
       var trueSolar = !!this.activeTrueFusions.solarMyth;
       var trueTide = !!this.activeTrueFusions.tidalSanctuary;
 
-      this.player.maxHp = 120 + neckLevel * 16 + (fusionGentle ? 30 : 0) + (trueTide ? 54 : 0);
+      this.player.maxHp = 120 + neckLevel * 16 + vitalBloomLevel * 10 + (fusionGentle ? 30 : 0) + (trueTide ? 54 : 0);
       this.player.speed = 260 + speedLevel * 20 + (fusionDrive ? 22 : 0) + (trueSolar ? 26 : 0);
-      this.player.fireRate = Math.max(0.1, 0.36 - fireLevel * 0.03 - (fusionBurst ? 0.04 : 0) - (trueSolar ? 0.05 : 0));
-      this.player.damage = 32 + damageLevel * 9 + heatSinkLevel * 2 + (fusionBurst ? 14 : 0) + (fusionDrive ? 10 : 0) + (trueSolar ? 20 : 0);
+      this.player.fireRate = Math.max(0.09, 0.36 - fireLevel * 0.03 - overclockLevel * 0.01 - (fusionBurst ? 0.04 : 0) - (trueSolar ? 0.05 : 0));
+      this.player.damage = 32 + damageLevel * 9 + heatSinkLevel * 2 + overclockLevel * 3 + vitalBloomLevel * 2 + (fusionBurst ? 14 : 0) + (fusionDrive ? 10 : 0) + (trueSolar ? 20 : 0);
       this.player.pickupRange = 96 + magnetLevel * 26 + (fusionNova ? 60 : 0) + (fusionGentle ? 30 : 0) + (trueTide ? 80 : 0);
       this.player.armor = neckLevel * 1.4 + shellLevel * 0.5 + (fusionGentle ? 2.5 : 0) + (trueTide ? 3.5 : 0);
       this.player.pierce = pierceLevel + Math.floor(heatSinkLevel / 2);
@@ -1988,10 +2206,18 @@
       this.player.swordLevel = swordLevel + (trueSolar ? 1 : 0);
       this.player.axeLevel = axeLevel + (trueSolar ? 1 : 0);
       this.player.wandLevel = wandLevel + (trueSolar ? 1 : 0);
+      this.player.thunderLevel = thunderLevel;
+      this.player.blizzardLevel = blizzardLevel;
+      this.player.crossLevel = crossLevel;
+      this.player.boomerangLevel = boomerangLevel;
+      this.player.petalLevel = petalLevel;
+      this.player.cometTrailLevel = cometTrailLevel;
+      this.player.vitalBloomLevel = vitalBloomLevel;
+      this.player.overclockLevel = overclockLevel;
       this.player.shotCount = 1 + Math.floor(hypeLevel / 2) + Math.floor(backstepLevel / 3) + (trueSolar ? 1 : 0);
-      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + (fusionDrive ? 120 : 0) + (trueSolar ? 140 : 0);
+      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + overclockLevel * 35 + (fusionDrive ? 120 : 0) + (trueSolar ? 140 : 0);
       this.player.xpGainMultiplier = 1 + luckLevel * 0.08 + (fusionBurst ? 0.12 : 0);
-      this.player.specialCooldownFactor = Math.max(0.42, 1 - heatSinkLevel * 0.08 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0) - (trueSolar ? 0.08 : 0) - (trueTide ? 0.05 : 0));
+      this.player.specialCooldownFactor = Math.max(0.34, 1 - heatSinkLevel * 0.08 - overclockLevel * 0.05 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0) - (trueSolar ? 0.08 : 0) - (trueTide ? 0.05 : 0));
 
       if (healOnGrow) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + 22);
@@ -3274,6 +3500,332 @@
       this.player.meteorCooldown = Math.max(1.2, 4.3 - level * 0.32) * this.player.specialCooldownFactor;
     }
 
+    fireThunderChain() {
+      var level = this.player.thunderLevel;
+      var currentTarget = this.getNearestEnemy();
+      var visual;
+      var chainRange;
+      var jumps;
+      var damage;
+      var fromX;
+      var fromY;
+      var hitEnemies;
+      var i;
+      var j;
+      var nextTarget;
+      var nearestDistance;
+
+      if (level <= 0 || !currentTarget) {
+        return;
+      }
+
+      visual = this.getSkillVisual("thunderChain");
+      chainRange = 158 + level * 20;
+      jumps = 2 + Math.floor(level / 2);
+      damage = Math.round(this.player.damage * 0.5 + 14 + level * 9);
+      fromX = this.player.x;
+      fromY = this.player.y;
+      hitEnemies = [];
+
+      for (i = 0; i < jumps && currentTarget; i += 1) {
+        this.beamFx.push({
+          x1: fromX,
+          y1: fromY,
+          x2: currentTarget.x,
+          y2: currentTarget.y,
+          width: 8 + level,
+          life: 0.14,
+          color: visual.color,
+          flashColor: visual.accentColor
+        });
+        currentTarget.hp -= Math.round(damage * Math.max(0.68, 1 - i * 0.12));
+        this.effects.spawnHit(currentTarget.x, currentTarget.y, {
+          color: visual.color,
+          ringColor: visual.accentColor,
+          radius: 11
+        });
+        hitEnemies.push(currentTarget);
+        if (currentTarget.hp <= 0) {
+          this.killEnemy(currentTarget, currentTarget.category === "elite" || currentTarget.category === "boss");
+          this.enemies.splice(this.enemies.indexOf(currentTarget), 1);
+        }
+        fromX = currentTarget.x;
+        fromY = currentTarget.y;
+        nextTarget = null;
+        nearestDistance = chainRange * chainRange;
+        for (j = 0; j < this.enemies.length; j += 1) {
+          var enemy = this.enemies[j];
+          if (hitEnemies.indexOf(enemy) >= 0) {
+            continue;
+          }
+          var dist = distanceSquared({ x: fromX, y: fromY }, enemy);
+          if (dist < nearestDistance) {
+            nearestDistance = dist;
+            nextTarget = enemy;
+          }
+        }
+        currentTarget = nextTarget;
+      }
+
+      this.spawnSkillSignature("thunderChain", fromX, fromY, {
+        power: 1.1 + level * 0.18,
+        radius: 16 + level * 2
+      });
+      this.player.thunderCooldown = Math.max(0.8, 3.2 - level * 0.24) * this.player.specialCooldownFactor;
+    }
+
+    fireBlizzardFan() {
+      var level = this.player.blizzardLevel;
+      var target = this.getNearestEnemy();
+      var angle;
+      var count;
+      var visual;
+      var i;
+
+      if (level <= 0) {
+        return;
+      }
+
+      angle = target
+        ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
+        : this.player.facingAngle;
+      this.player.facingAngle = angle;
+      count = 4 + level * 2;
+      visual = this.getSkillVisual("blizzardFan");
+
+      for (i = 0; i < count; i += 1) {
+        var spread = count > 1 ? (i - (count - 1) / 2) * 0.1 : 0;
+        this.createPlayerShot({
+          x: Math.cos(angle + spread),
+          y: Math.sin(angle + spread)
+        }, {
+          originX: this.player.x + Math.cos(angle) * 16,
+          originY: this.player.y + Math.sin(angle) * 16,
+          speed: this.player.bulletSpeed * 0.82,
+          radius: 5,
+          life: 1.35,
+          damage: Math.round(this.player.damage * 0.34 + 8 + level * 5),
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "ice",
+          skinKind: "pulse",
+          shape: "circle",
+          trailRate: 0.05
+        });
+      }
+
+      this.spawnSkillSignature("blizzardFan", this.player.x, this.player.y, {
+        power: 0.9 + level * 0.18,
+        angle: angle,
+        radius: 20 + level * 3
+      });
+      this.player.blizzardCooldown = Math.max(0.46, 1.56 - level * 0.1) * this.player.specialCooldownFactor;
+    }
+
+    fireCrossLance() {
+      var level = this.player.crossLevel;
+      var visual;
+      var directions;
+      var i;
+
+      if (level <= 0) {
+        return;
+      }
+
+      visual = this.getSkillVisual("crossLance");
+      directions = [
+        0,
+        Math.PI * 0.5,
+        Math.PI,
+        Math.PI * 1.5
+      ];
+      if (level >= 4) {
+        directions.push(Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75);
+      }
+
+      for (i = 0; i < directions.length; i += 1) {
+        this.createPlayerShot({
+          x: Math.cos(directions[i]),
+          y: Math.sin(directions[i])
+        }, {
+          speed: this.player.bulletSpeed * 0.96,
+          radius: 6,
+          life: 1.18,
+          damage: Math.round(this.player.damage * 0.42 + 10 + level * 6),
+          pierce: 1 + Math.floor(level / 3),
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "cross",
+          skinKind: "beam",
+          shape: "diamond",
+          trailRate: 0.05
+        });
+      }
+
+      this.spawnSkillSignature("crossLance", this.player.x, this.player.y, {
+        power: 1 + level * 0.2,
+        radius: 24 + level * 4
+      });
+      this.player.crossCooldown = Math.max(0.88, 2.65 - level * 0.16) * this.player.specialCooldownFactor;
+    }
+
+    fireBoomerangDisc() {
+      var level = this.player.boomerangLevel;
+      var target = this.getNearestEnemy();
+      var angle;
+      var count;
+      var visual;
+      var i;
+
+      if (level <= 0) {
+        return;
+      }
+
+      angle = target
+        ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
+        : this.player.facingAngle;
+      this.player.facingAngle = angle;
+      count = 1 + Math.floor(level / 2);
+      visual = this.getSkillVisual("boomerangDisc");
+
+      for (i = 0; i < count; i += 1) {
+        var spread = count > 1 ? (i - (count - 1) / 2) * 0.24 : 0;
+        this.createPlayerShot({
+          x: Math.cos(angle + spread),
+          y: Math.sin(angle + spread)
+        }, {
+          originX: this.player.x + Math.cos(angle + spread) * 22,
+          originY: this.player.y + Math.sin(angle + spread) * 22,
+          speed: this.player.bulletSpeed * 0.74,
+          radius: 9,
+          life: 1.7,
+          damage: Math.round(this.player.damage * 0.46 + 12 + level * 7),
+          pierce: 2 + Math.floor(level / 2),
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "disc",
+          skinKind: "crit",
+          shape: "diamond",
+          spin: 14,
+          trailRate: 0.04
+        });
+      }
+
+      this.spawnSkillSignature("boomerangDisc", this.player.x, this.player.y, {
+        power: 1 + level * 0.2,
+        angle: angle,
+        radius: 18 + level * 3
+      });
+      this.player.boomerangCooldown = Math.max(0.84, 2.2 - level * 0.14) * this.player.specialCooldownFactor;
+    }
+
+    firePetalStorm() {
+      var level = this.player.petalLevel;
+      var count;
+      var visual;
+      var i;
+
+      if (level <= 0) {
+        return;
+      }
+
+      count = 8 + level * 2;
+      visual = this.getSkillVisual("petalStorm");
+
+      for (i = 0; i < count; i += 1) {
+        var angle = this.elapsedSec * 1.8 + (Math.PI * 2 * i) / count;
+        this.createPlayerShot({
+          x: Math.cos(angle),
+          y: Math.sin(angle)
+        }, {
+          speed: 320 + level * 18,
+          radius: 5,
+          life: 1.08,
+          damage: Math.round(this.player.damage * 0.32 + 7 + level * 5),
+          pierce: 1,
+          color: visual.color,
+          trailColor: visual.trailColor,
+          accentColor: visual.accentColor,
+          kind: "petal",
+          skinKind: "pulse",
+          shape: "circle",
+          trailRate: 0.06
+        });
+      }
+
+      this.spawnSkillSignature("petalStorm", this.player.x, this.player.y, {
+        power: 0.9 + level * 0.16,
+        radius: 26 + level * 4
+      });
+      this.player.petalCooldown = Math.max(0.76, 2.42 - level * 0.16) * this.player.specialCooldownFactor;
+    }
+
+    fireCometTrail() {
+      var level = this.player.cometTrailLevel;
+      var target = this.getNearestEnemy();
+      var visual;
+      var hits;
+      var radius;
+      var damage;
+      var i;
+      var j;
+
+      if (level <= 0) {
+        return;
+      }
+
+      visual = this.getSkillVisual("cometTrail");
+      hits = 2 + Math.floor(level / 2);
+      radius = 34 + level * 6;
+      damage = Math.round(this.player.damage * 0.58 + 14 + level * 8);
+
+      for (i = 0; i < hits; i += 1) {
+        var anchorX = target ? target.x : this.player.x;
+        var anchorY = target ? target.y : this.player.y;
+        var offsetAngle = this.elapsedSec * 1.2 + i * (Math.PI * 0.8);
+        var impactX = anchorX + Math.cos(offsetAngle) * (30 + level * 10);
+        var impactY = anchorY + Math.sin(offsetAngle) * (26 + level * 8);
+        this.pushWeaponFx({
+          kind: "meteor",
+          x: impactX,
+          y: impactY,
+          angle: -Math.PI * 0.5,
+          reach: 94 + level * 10,
+          arc: 0.18,
+          width: 12 + level,
+          life: 0.24,
+          color: visual.color,
+          accentColor: visual.accentColor,
+          trailColor: visual.trailColor,
+          motif: visual.motif
+        });
+        this.spawnSkillSignature("cometTrail", impactX, impactY, {
+          power: 1 + level * 0.16,
+          radius: radius
+        });
+        for (j = this.enemies.length - 1; j >= 0; j -= 1) {
+          var enemy = this.enemies[j];
+          if (pointDistance(enemy.x, enemy.y, impactX, impactY) <= radius + enemy.radius) {
+            enemy.hp -= damage;
+            this.effects.spawnHit(enemy.x, enemy.y, {
+              color: visual.color,
+              ringColor: visual.accentColor,
+              radius: 10
+            });
+            if (enemy.hp <= 0) {
+              this.killEnemy(enemy, enemy.category === "elite" || enemy.category === "boss");
+              this.enemies.splice(j, 1);
+            }
+          }
+        }
+      }
+
+      this.player.cometTrailCooldown = Math.max(1.5, 4.9 - level * 0.3) * this.player.specialCooldownFactor;
+    }
+
     updateHaloSigils(dt) {
       var level = this.player.haloLevel;
       var count;
@@ -3442,6 +3994,42 @@
           }
         }
       }
+      if (this.player.vitalBloomLevel > 0) {
+        this.player.vitalBloomPulse -= dt;
+        if (this.player.vitalBloomPulse <= 0) {
+          var vitalRadius = 88 + this.player.vitalBloomLevel * 14;
+          var vitalDamage = Math.round(8 + this.player.vitalBloomLevel * 6 + this.player.damage * 0.16);
+          var vitalVisual = this.getSkillVisual("vitalBloom");
+          this.player.vitalBloomPulse = Math.max(0.54, 1.95 - this.player.vitalBloomLevel * 0.12);
+          this.healPlayer(3 + this.player.vitalBloomLevel * 2);
+          this.effects.spawnRing(this.player.x, this.player.y, {
+            color: vitalVisual.color,
+            radius: 16,
+            growth: vitalRadius,
+            lineWidth: 3,
+            life: 0.22,
+            fillAlpha: 0.06
+          });
+          this.spawnSkillSignature("vitalBloom", this.player.x, this.player.y, {
+            power: 0.9 + this.player.vitalBloomLevel * 0.18,
+            radius: 22 + this.player.vitalBloomLevel * 3
+          });
+          for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+            if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= vitalRadius + this.enemies[i].radius) {
+              this.enemies[i].hp -= vitalDamage;
+              this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
+                color: vitalVisual.color,
+                ringColor: vitalVisual.accentColor,
+                radius: 8
+              });
+              if (this.enemies[i].hp <= 0) {
+                this.killEnemy(this.enemies[i], this.enemies[i].category === "boss" || this.enemies[i].category === "elite");
+                this.enemies.splice(i, 1);
+              }
+            }
+          }
+        }
+      }
     }
 
     triggerSaltGuard() {
@@ -3583,6 +4171,13 @@
           power: 0.8 + this.player.hypeLevel * 0.18,
           angle: baseAngle,
           radius: 18
+        });
+      }
+      if (this.player.overclockLevel > 0 && Math.random() < 0.34) {
+        this.spawnSkillSignature("overclockLoop", this.player.x, this.player.y, {
+          power: 0.8 + this.player.overclockLevel * 0.16,
+          angle: baseAngle,
+          radius: 14 + this.player.overclockLevel * 2
         });
       }
     }
@@ -4312,6 +4907,48 @@
         this.player.wandCooldown -= dt;
         if (this.player.wandCooldown <= 0) {
           this.fireMysticWand();
+        }
+      }
+
+      if (this.player.thunderLevel > 0) {
+        this.player.thunderCooldown -= dt;
+        if (this.player.thunderCooldown <= 0) {
+          this.fireThunderChain();
+        }
+      }
+
+      if (this.player.blizzardLevel > 0) {
+        this.player.blizzardCooldown -= dt;
+        if (this.player.blizzardCooldown <= 0) {
+          this.fireBlizzardFan();
+        }
+      }
+
+      if (this.player.crossLevel > 0) {
+        this.player.crossCooldown -= dt;
+        if (this.player.crossCooldown <= 0) {
+          this.fireCrossLance();
+        }
+      }
+
+      if (this.player.boomerangLevel > 0) {
+        this.player.boomerangCooldown -= dt;
+        if (this.player.boomerangCooldown <= 0) {
+          this.fireBoomerangDisc();
+        }
+      }
+
+      if (this.player.petalLevel > 0) {
+        this.player.petalCooldown -= dt;
+        if (this.player.petalCooldown <= 0) {
+          this.firePetalStorm();
+        }
+      }
+
+      if (this.player.cometTrailLevel > 0) {
+        this.player.cometTrailCooldown -= dt;
+        if (this.player.cometTrailCooldown <= 0) {
+          this.fireCometTrail();
         }
       }
 
@@ -5275,6 +5912,9 @@
       }
 
       if (this.merchant.open) {
+        if (this.isBotMode) {
+          this.autoResolveMerchant();
+        }
         this.handleMerchantInput(input);
         this.effects.update(dt * 0.3);
         this.updateMessages(dt);
@@ -5469,6 +6109,7 @@
     drawButtons(renderer) {
       var buttons = this.getActionButtons();
       var pointer = this.game.input.getPointer();
+      var compact = !!ns.constants.IS_MOBILE_PORTRAIT;
       var i;
       for (i = 0; i < buttons.length; i += 1) {
         var hovered = pointer.inside && pointInRect(pointer, buttons[i]);
@@ -5477,7 +6118,7 @@
           border: buttons[i].border
         });
         renderer.drawText(buttons[i].label, buttons[i].x + buttons[i].width / 2, buttons[i].y + 10, {
-          size: 18,
+          size: compact ? 14 : 18,
           align: "center",
           color: buttons[i].border
         });
@@ -6388,14 +7029,35 @@
         : this.isTouchUi
           ? translate(this.game, "survivor.touchHint")
           : translate(this.game, "survivor.desktopHint");
-      renderer.drawText(hint, ns.constants.GAME_WIDTH * 0.5, ns.constants.GAME_HEIGHT - 34, {
-        size: this.isTouchUi ? 20 : 18,
+      var hintY = ns.constants.IS_MOBILE_PORTRAIT ? ns.constants.GAME_HEIGHT - 118 : ns.constants.GAME_HEIGHT - 34;
+      renderer.drawText(hint, ns.constants.GAME_WIDTH * 0.5, hintY, {
+        size: ns.constants.IS_MOBILE_PORTRAIT ? 14 : (this.isTouchUi ? 20 : 18),
         align: "center",
         color: "#d2c7a9"
       });
     }
 
     drawPauseOverlay(renderer) {
+      if (ns.constants.IS_MOBILE_PORTRAIT) {
+        renderer.drawPanel(34, 328, 472, 174, {
+          fill: "rgba(5, 5, 5, 0.94)",
+          border: "#7fe6ff"
+        });
+        renderer.drawCenteredText(translate(this.game, "survivor.paused"), 360, {
+          size: 32,
+          color: "#7fe6ff",
+          shadow: true
+        });
+        renderer.drawCenteredText(translate(this.game, "survivor.pauseResume"), 414, {
+          size: 18,
+          color: "#f4f0da"
+        });
+        renderer.drawCenteredText(translate(this.game, "survivor.pauseRestart"), 446, {
+          size: 18,
+          color: "#d9d1ff"
+        });
+        return;
+      }
       renderer.drawPanel(220, 238, 520, 188, {
         fill: "rgba(5, 5, 5, 0.94)",
         border: "#7fe6ff"
@@ -6501,12 +7163,13 @@
 
     drawEndOverlay(renderer) {
       var theme = this.getSkinShowcaseTheme();
-      var panelX = 154;
-      var panelY = 188;
-      var panelWidth = 652;
-      var panelHeight = 274;
+      var panelX = ns.constants.IS_MOBILE_PORTRAIT ? 24 : 154;
+      var panelY = ns.constants.IS_MOBILE_PORTRAIT ? 156 : 188;
+      var panelWidth = ns.constants.IS_MOBILE_PORTRAIT ? 492 : 652;
+      var panelHeight = ns.constants.IS_MOBILE_PORTRAIT ? 514 : 274;
       var titleColor = this.endReason === "CLEARED" ? "#88f291" : "#ff8a70";
       var nextBot = this.isBotMode && this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex + 1) : null;
+      var textWidth = ns.constants.IS_MOBILE_PORTRAIT ? 438 : 406;
 
       renderer.drawPanel(panelX, panelY, panelWidth, panelHeight, {
         fill: theme.panelFill,
@@ -6514,7 +7177,7 @@
       });
       this.drawSkinVictoryDecor(renderer, panelX, panelY, panelWidth, panelHeight);
       renderer.drawText(this.endReason === "CLEARED" ? translate(this.game, "survivor.runCleared") : translate(this.game, "survivor.runOver"), panelX + 28, panelY + 24, {
-        size: 40,
+        size: ns.constants.IS_MOBILE_PORTRAIT ? 30 : 40,
         color: titleColor,
         shadow: true
       });
@@ -6527,44 +7190,116 @@
             : translate(this.game, "common.level") + " " + this.player.level) +
         "  " + translate(this.game, "common.kills") + " " + this.player.kills,
         panelX + 30,
-        panelY + 92,
-        { size: 22, color: "#f4f0da" }
+        panelY + (ns.constants.IS_MOBILE_PORTRAIT ? 88 : 92),
+        { size: ns.constants.IS_MOBILE_PORTRAIT ? 18 : 22, color: "#f4f0da" }
       );
       renderer.drawText(
         translate(this.game, "buttons.mode") + " " + this.getModeLabel() +
         "  " + translate(this.game, "common.score") + " " + formatScore(this.score),
         panelX + 30,
-        panelY + 126,
-        { size: 21, color: theme.secondary }
+        panelY + (ns.constants.IS_MOBILE_PORTRAIT ? 118 : 126),
+        { size: ns.constants.IS_MOBILE_PORTRAIT ? 18 : 21, color: theme.secondary }
       );
-      renderer.drawParagraph(translate(this.game, "survivor.retryHint"), panelX + 30, panelY + 164, 406, {
-        size: 24,
-        lineHeight: 30,
+      renderer.drawParagraph(translate(this.game, "survivor.retryHint"), panelX + 30, panelY + (ns.constants.IS_MOBILE_PORTRAIT ? 162 : 164), textWidth, {
+        size: ns.constants.IS_MOBILE_PORTRAIT ? 18 : 24,
+        lineHeight: ns.constants.IS_MOBILE_PORTRAIT ? 24 : 30,
         color: "#d2c7a9"
       });
       if (this.isBotMode) {
         renderer.drawText(translate(this.game, "survivor.botAutoRetry", {
           time: Math.max(0, this.botState.restartTimer).toFixed(1)
-        }), panelX + 30, panelY + 198, {
-          size: 18,
+        }), panelX + 30, panelY + (ns.constants.IS_MOBILE_PORTRAIT ? 248 : 198), {
+          size: ns.constants.IS_MOBILE_PORTRAIT ? 16 : 18,
           color: "#7fe6ff"
         });
         renderer.drawText(translate(this.game, "survivor.botNext", {
           bot: nextBot ? this.getBotName(nextBot) : "-"
-        }), panelX + 30, panelY + 224, {
-          size: 16,
+        }), panelX + 30, panelY + (ns.constants.IS_MOBILE_PORTRAIT ? 274 : 224), {
+          size: ns.constants.IS_MOBILE_PORTRAIT ? 14 : 16,
           color: "#d6d0ff"
         });
       }
-      renderer.drawParagraph(getMetaText(this.game, this.skinDef || {}, "desc"), panelX + 30, panelY + (this.isBotMode ? 246 : 206), 406, {
-        size: 16,
-        lineHeight: 22,
+      renderer.drawParagraph(getMetaText(this.game, this.skinDef || {}, "desc"), panelX + 30, panelY + (ns.constants.IS_MOBILE_PORTRAIT ? (this.isBotMode ? 318 : 244) : (this.isBotMode ? 246 : 206)), textWidth, {
+        size: ns.constants.IS_MOBILE_PORTRAIT ? 14 : 16,
+        lineHeight: ns.constants.IS_MOBILE_PORTRAIT ? 20 : 22,
         color: "#f4e0b6"
       });
     }
 
     drawLevelUpOverlay(renderer) {
       var ctx = renderer.ctx;
+      if (ns.constants.IS_MOBILE_PORTRAIT) {
+        var mPanelX = 22;
+        var mCardX = 32;
+        var mCardY = 170;
+        var mCardWidth = 476;
+        var i;
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.fillRect(0, 0, ns.constants.GAME_WIDTH, ns.constants.GAME_HEIGHT);
+        ctx.restore();
+
+        renderer.drawPanel(mPanelX, 54, 496, 82, {
+          fill: "rgba(40, 44, 72, 0.94)",
+          border: "#d6d0ff"
+        });
+        renderer.drawCenteredText(translate(this.game, "common.levelUp"), 72, {
+          size: 32,
+          color: "#ffffff",
+          shadow: true
+        });
+        renderer.drawCenteredText(translate(this.game, "common.chooseBuildPiece"), 106, {
+          size: 16,
+          color: "#f4f0da"
+        });
+        renderer.drawText(
+          translate(this.game, "common.level") + " " + this.player.level +
+          "  " + translate(this.game, "common.atk") + " " + this.player.damage +
+          "  " + translate(this.game, "common.spd") + " " + this.player.speed,
+          270,
+          132,
+          {
+            size: 14,
+            align: "center",
+            color: "#d8c8a4"
+          }
+        );
+
+        for (i = 0; i < this.levelUpChoices.length; i += 1) {
+          var mobileUpgradeId = this.levelUpChoices[i];
+          var mobileDef = UPGRADE_CATALOG[mobileUpgradeId];
+          var mobileCurrentLevel = this.getUpgradeLevel(mobileUpgradeId);
+          var mobileHovered = i === this.levelUpHover;
+          var mobileSelected = i === this.levelUpSelected;
+          var mobileCardY = mCardY + i * 172;
+          renderer.drawPanel(mCardX, mobileCardY, mCardWidth, 148, {
+            fill: mobileSelected || mobileHovered ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.26)",
+            border: mobileSelected ? mobileDef.color : mobileHovered ? "#fff1c4" : "rgba(255,255,255,0.12)"
+          });
+          drawUpgradeIcon(ctx, mobileUpgradeId, mCardX + 18, mobileCardY + 40, 72, mobileDef.color);
+          renderer.drawText(getUpgradeName(this.game, mobileUpgradeId), mCardX + 108, mobileCardY + 20, {
+            size: 24,
+            color: mobileDef.color
+          });
+          renderer.drawText(mobileCurrentLevel === 0 ? translate(this.game, "common.new") : translate(this.game, "common.level") + " " + (mobileCurrentLevel + 1), mCardX + mCardWidth - 18, mobileCardY + 22, {
+            size: 15,
+            align: "right",
+            color: mobileCurrentLevel === 0 ? "#fff1c4" : "#f4f0da"
+          });
+          renderer.drawParagraph(getUpgradeDescription(this.game, mobileUpgradeId, mobileCurrentLevel + 1), mCardX + 108, mobileCardY + 56, 336, {
+            size: 16,
+            lineHeight: 22,
+            color: "#f4f0da"
+          });
+        }
+
+        renderer.drawCenteredText(translate(this.game, "common.chooseConfirm"), 922, {
+          size: 14,
+          color: "#d8c8a4"
+        });
+        return;
+      }
       var panelX = 92;
       var leftWidth = 246;
       var cardX = ns.constants.GAME_WIDTH - LEVELUP_CARD_WIDTH - 74;
@@ -6637,6 +7372,95 @@
 
     drawMerchantOverlay(renderer) {
       var ctx = renderer.ctx;
+      if (ns.constants.IS_MOBILE_PORTRAIT) {
+        var mobilePanelX = 18;
+        var mobilePanelY = 120;
+        var mobileWidth = 504;
+        var i;
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.fillRect(0, 0, ns.constants.GAME_WIDTH, ns.constants.GAME_HEIGHT);
+        ctx.restore();
+
+        renderer.drawPanel(mobilePanelX, mobilePanelY, mobileWidth, 700, {
+          fill: "rgba(30, 18, 24, 0.96)",
+          border: "#ff91d7"
+        });
+        renderer.drawText(translate(this.game, "survivor.merchantTitle"), mobilePanelX + 20, mobilePanelY + 18, {
+          size: 28,
+          color: "#ff91d7",
+          shadow: true
+        });
+        renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, mobilePanelX + mobileWidth - 20, mobilePanelY + 22, {
+          size: 18,
+          align: "right",
+          color: "#f6c453"
+        });
+        renderer.drawParagraph(translate(this.game, "survivor.merchantHint"), mobilePanelX + 20, mobilePanelY + 62, 464, {
+          size: 14,
+          lineHeight: 20,
+          color: "#f4e0b6"
+        });
+
+        renderer.drawPanel(mobilePanelX + 18, mobilePanelY + 112, 468, 120, {
+          fill: "rgba(10, 10, 10, 0.92)",
+          border: "#6a4b27"
+        });
+        renderer.drawPixelSprite({
+          x: mobilePanelX + 36,
+          y: mobilePanelY + 124,
+          width: 84,
+          height: 94
+        }, "shop", {
+          border: "#ff91d7"
+        });
+        renderer.drawText(translate(this.game, "survivor.merchantName"), mobilePanelX + 144, mobilePanelY + 132, {
+          size: 18,
+          color: "#f4f0da"
+        });
+        renderer.drawParagraph(translate(this.game, "survivor.merchantHint"), mobilePanelX + 144, mobilePanelY + 162, 318, {
+          size: 12,
+          lineHeight: 18,
+          color: "#d8c8a4"
+        });
+
+        for (i = 0; i < this.merchant.offers.length; i += 1) {
+          var mobileOffer = this.merchant.offers[i];
+          var mobileRowY = mobilePanelY + 248 + i * 88;
+          var mobileSelected = i === this.merchant.selected;
+          var mobileHovered = i === this.merchant.hover;
+          renderer.drawPanel(mobilePanelX + 18, mobileRowY, 468, 76, {
+            fill: mobileSelected || mobileHovered ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.22)",
+            border: mobileOffer.soldOut ? "#5a5048" : mobileSelected ? mobileOffer.color : mobileHovered ? "#fff1c4" : "#5f4423"
+          });
+          renderer.drawText(mobileOffer.label, mobilePanelX + 34, mobileRowY + 14, {
+            size: 18,
+            color: mobileOffer.soldOut ? "#8d7e66" : (mobileOffer.color || "#f4f0da")
+          });
+          renderer.drawText(mobileOffer.soldOut ? translate(this.game, "common.sold") : String(mobileOffer.cost), mobilePanelX + 468, mobileRowY + 16, {
+            size: 16,
+            align: "right",
+            color: mobileOffer.soldOut ? "#8d7e66" : "#f6c453"
+          });
+          renderer.drawParagraph(mobileOffer.desc, mobilePanelX + 34, mobileRowY + 38, 414, {
+            size: 12,
+            lineHeight: 16,
+            color: "#f4e0b6"
+          });
+        }
+
+        renderer.drawPanel(mobilePanelX + 332, mobilePanelY + 654, 154, 46, {
+          fill: "rgba(8, 8, 8, 0.92)",
+          border: "#d6d0ff"
+        });
+        renderer.drawText(this.game.t("buttons.leave"), mobilePanelX + 409, mobilePanelY + 666, {
+          size: 18,
+          align: "center",
+          color: "#d6d0ff"
+        });
+        return;
+      }
       var panelX = 182;
       var panelY = 132;
       var i;

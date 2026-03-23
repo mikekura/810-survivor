@@ -58,6 +58,10 @@
       this.game.audio.playTrack("title");
     }
 
+    isPortraitLayout() {
+      return !!(ns.constants && ns.constants.IS_MOBILE_PORTRAIT);
+    }
+
     getCurrentSkin() {
       return this.skins[this.selectedIndex] || this.skins[0] || null;
     }
@@ -79,6 +83,14 @@
     }
 
     getListMetrics() {
+      if (this.isPortraitLayout()) {
+        return {
+          rowHeight: 28,
+          gap: 4,
+          spriteWidth: 22,
+          spriteHeight: 26
+        };
+      }
       if (this.skins.length > 10) {
         return {
           rowHeight: 36,
@@ -97,6 +109,14 @@
 
     getRowRect(index) {
       var metrics = this.getListMetrics();
+      if (this.isPortraitLayout()) {
+        return {
+          x: 34,
+          y: 118 + index * (metrics.rowHeight + metrics.gap),
+          width: 472,
+          height: metrics.rowHeight
+        };
+      }
       return {
         x: 70,
         y: 154 + index * (metrics.rowHeight + metrics.gap),
@@ -106,14 +126,26 @@
     }
 
     getBackButton() {
+      if (this.isPortraitLayout()) {
+        return { x: 390, y: 26, width: 122, height: 42 };
+      }
       return { x: 760, y: 42, width: 150, height: 52 };
     }
 
     getPrimaryButton() {
+      if (this.isPortraitLayout()) {
+        return { x: 266, y: 874, width: 240, height: 56 };
+      }
       return { x: 604, y: 576, width: 248, height: 64 };
     }
 
     getDialogButtons() {
+      if (this.isPortraitLayout()) {
+        return [
+          { x: 66, y: 602, width: 182, height: 50 },
+          { x: 292, y: 602, width: 182, height: 50 }
+        ];
+      }
       return [
         { x: 324, y: 484, width: 156, height: 54 },
         { x: 500, y: 484, width: 156, height: 54 }
@@ -271,23 +303,24 @@
       var backButton = this.getBackButton();
       var metrics = this.getListMetrics();
       var i;
+      var isPortrait = this.isPortraitLayout();
 
       renderer.clear("#120c08");
-      renderer.drawPanel(34, 28, 892, 664, {
+      renderer.drawPanel(isPortrait ? 16 : 34, isPortrait ? 16 : 28, isPortrait ? 508 : 892, isPortrait ? 928 : 664, {
         fill: "rgba(12, 8, 6, 0.96)",
         border: "#f6c453"
       });
-      renderer.drawText(this.game.t("store.title"), 58, 42, {
-        size: 42,
+      renderer.drawText(this.game.t("store.title"), isPortrait ? 30 : 58, isPortrait ? 28 : 42, {
+        size: isPortrait ? 32 : 42,
         color: "#f6c453",
         shadow: true
       });
-      renderer.drawText(this.game.t("store.subtitle"), 58, 92, {
-        size: 20,
+      renderer.drawText(this.game.t("store.subtitle"), isPortrait ? 30 : 58, isPortrait ? 62 : 92, {
+        size: isPortrait ? 15 : 20,
         color: "#f4e0b6"
       });
 
-      renderer.drawPanel(56, 138, 300, 518, {
+      renderer.drawPanel(isPortrait ? 24 : 56, isPortrait ? 100 : 138, isPortrait ? 492 : 300, isPortrait ? 424 : 518, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: "#6a4b27"
       });
@@ -316,7 +349,7 @@
           border: skin.color || "#ffffff"
         });
         renderer.drawText(skinText(this.game, skin, "name"), rowRect.x + 66, rowY + (compact ? 6 : 10), {
-          size: compact ? 14 : 18,
+          size: isPortrait ? 11 : (compact ? 14 : 18),
           color: "#f4f0da"
         });
         renderer.drawText(
@@ -334,7 +367,7 @@
           rowRect.x + rowRect.width - 20,
           rowY + (compact ? 8 : 14),
           {
-            size: compact ? 11 : 14,
+            size: isPortrait ? 10 : (compact ? 11 : 14),
             align: "right",
             color: rowEquipped ? "#fff1c4" : rowOwned ? "#9cffb8" : this.isScoreUnlock(skin) ? "#7fe6ff" : "#ff9c4b"
           }
@@ -348,13 +381,13 @@
           rowRect.x + 66,
           rowY + (compact ? 22 : 32),
           {
-            size: compact ? 10 : 14,
+            size: isPortrait ? 9 : (compact ? 10 : 14),
             color: this.isScoreUnlock(skin) ? "#7fe6ff" : skin.premium ? "#ff91d7" : "#9cffb8"
           }
         );
       }
 
-      renderer.drawPanel(382, 138, 516, 518, {
+      renderer.drawPanel(isPortrait ? 24 : 382, isPortrait ? 544 : 138, isPortrait ? 492 : 516, isPortrait ? 330 : 518, {
         fill: "rgba(18, 20, 28, 0.94)",
         border: (current && current.color) || "#d6d0ff"
       });
@@ -364,31 +397,31 @@
         renderer.ctx.globalAlpha = 0.22;
         renderer.ctx.lineWidth = 3;
         renderer.ctx.beginPath();
-        renderer.ctx.arc(514, 334, 74 + Math.sin(this.previewTime * 4.8) * 4, 0, Math.PI * 2);
+        renderer.ctx.arc(isPortrait ? 100 : 514, isPortrait ? 646 : 334, 74 + Math.sin(this.previewTime * 4.8) * 4, 0, Math.PI * 2);
         renderer.ctx.stroke();
         renderer.ctx.globalAlpha = 0.12;
         renderer.ctx.beginPath();
-        renderer.ctx.arc(514, 334, 90 + Math.cos(this.previewTime * 4) * 5, 0, Math.PI * 2);
+        renderer.ctx.arc(isPortrait ? 100 : 514, isPortrait ? 646 : 334, 90 + Math.cos(this.previewTime * 4) * 5, 0, Math.PI * 2);
         renderer.ctx.stroke();
         renderer.ctx.fillStyle = current.auraColor;
         renderer.ctx.globalAlpha = 0.3;
-        renderer.ctx.fillRect(462, 250 + Math.sin(this.previewTime * 6) * 3, 5, 5);
-        renderer.ctx.fillRect(560, 278 + Math.cos(this.previewTime * 5) * 3, 5, 5);
+        renderer.ctx.fillRect(isPortrait ? 42 : 462, (isPortrait ? 586 : 250) + Math.sin(this.previewTime * 6) * 3, 5, 5);
+        renderer.ctx.fillRect(isPortrait ? 138 : 560, (isPortrait ? 614 : 278) + Math.cos(this.previewTime * 5) * 3, 5, 5);
         renderer.ctx.restore();
       }
       renderer.drawPixelSprite({
-        x: 420,
-        y: 182,
-        width: 188,
-        height: 244
+        x: isPortrait ? 34 : 420,
+        y: isPortrait ? 566 : 182,
+        width: isPortrait ? 130 : 188,
+        height: isPortrait ? 178 : 244
       }, "senpai", {
         variant: current ? current.id : "",
         moving: true,
         walkPhase: this.previewTime * 7,
         border: (current && current.color) || "#ffffff"
       });
-      renderer.drawText(current ? skinText(this.game, current, "name") : "", 630, 182, {
-        size: 34,
+      renderer.drawText(current ? skinText(this.game, current, "name") : "", isPortrait ? 178 : 630, isPortrait ? 566 : 182, {
+        size: isPortrait ? 24 : 34,
         color: (current && current.color) || "#f4f0da"
       });
       renderer.drawText(
@@ -397,20 +430,20 @@
           : owned
             ? this.game.t("common.owned")
             : this.game.t("common.locked"),
-        854,
-        194,
+        isPortrait ? 482 : 854,
+        isPortrait ? 570 : 194,
         {
-          size: 18,
+          size: isPortrait ? 13 : 18,
           align: "right",
           color: equipped ? "#fff1c4" : owned ? "#9cffb8" : "#ff9c4b"
         }
       );
       renderer.drawText(
         this.game.t("common.price") + "  " + formatPrice(this.game, current),
-        630,
-        230,
+        isPortrait ? 178 : 630,
+        isPortrait ? 600 : 230,
         {
-          size: 18,
+          size: isPortrait ? 14 : 18,
           color: "#f4e0b6"
         }
       );
@@ -420,39 +453,39 @@
             score: (current && current.scoreThreshold || 0).toLocaleString ? (current && current.scoreThreshold || 0).toLocaleString() : (current && current.scoreThreshold || 0)
           })
           : current && current.premium ? this.game.t("common.premium") : this.game.t("common.free"),
-        630,
-        260,
+        isPortrait ? 178 : 630,
+        isPortrait ? 624 : 260,
         {
-          size: 18,
+          size: isPortrait ? 14 : 18,
           color: this.isScoreUnlock(current) ? "#7fe6ff" : current && current.premium ? "#ff91d7" : "#9cffb8"
         }
       );
-      renderer.drawParagraph(current ? skinText(this.game, current, "desc") : "", 630, 308, 228, {
-        size: 20,
-        lineHeight: 30,
+      renderer.drawParagraph(current ? skinText(this.game, current, "desc") : "", isPortrait ? 178 : 630, isPortrait ? 654 : 308, isPortrait ? 304 : 228, {
+        size: isPortrait ? 16 : 20,
+        lineHeight: isPortrait ? 22 : 30,
         color: "#f4f0da"
       });
-      renderer.drawParagraph(this.game.t("store.cosmeticOnly"), 420, 454, 438, {
-        size: 18,
-        lineHeight: 26,
+      renderer.drawParagraph(this.game.t("store.cosmeticOnly"), isPortrait ? 34 : 420, isPortrait ? 756 : 454, isPortrait ? 452 : 438, {
+        size: isPortrait ? 14 : 18,
+        lineHeight: isPortrait ? 20 : 26,
         color: "#d8c8a4"
       });
       renderer.drawParagraph(
         owned ? this.game.t("store.hint") : this.isScoreUnlock(current) && !buyable ? this.game.t("store.scoreLockedHint") : this.game.t("store.lockedHint"),
-        420,
-        528,
-        438,
+        isPortrait ? 34 : 420,
+        isPortrait ? 798 : 528,
+        isPortrait ? 452 : 438,
         {
-          size: 18,
-          lineHeight: 26,
+          size: isPortrait ? 14 : 18,
+          lineHeight: isPortrait ? 20 : 26,
           color: "#f4e0b6"
         }
       );
 
       if (this.notice) {
-        renderer.drawParagraph(this.notice, 420, 492, 438, {
-          size: 16,
-          lineHeight: 22,
+        renderer.drawParagraph(this.notice, isPortrait ? 34 : 420, isPortrait ? 840 : 492, isPortrait ? 452 : 438, {
+          size: isPortrait ? 13 : 16,
+          lineHeight: isPortrait ? 18 : 22,
           color: this.noticeColor
         });
       }
@@ -474,7 +507,7 @@
         primaryButton.x + primaryButton.width / 2,
         primaryButton.y + 18,
         {
-          size: this.isScoreUnlock(current) && !buyable ? 22 : 28,
+          size: isPortrait ? (this.isScoreUnlock(current) && !buyable ? 16 : 22) : (this.isScoreUnlock(current) && !buyable ? 22 : 28),
           align: "center",
           color: "#f4f0da"
         }
@@ -484,39 +517,39 @@
         fill: "rgba(8, 8, 8, 0.88)",
         border: "#d6d0ff"
       });
-      renderer.drawText(this.game.t("buttons.back"), 835, 56, {
-        size: 22,
+      renderer.drawText(this.game.t("buttons.back"), backButton.x + backButton.width / 2, backButton.y + 10, {
+        size: isPortrait ? 18 : 22,
         align: "center",
         color: "#d6d0ff"
       });
 
       if (this.purchaseTarget) {
         var dialogButtons = this.getDialogButtons();
-        renderer.drawPanel(234, 214, 492, 356, {
+        renderer.drawPanel(isPortrait ? 34 : 234, isPortrait ? 354 : 214, isPortrait ? 472 : 492, isPortrait ? 322 : 356, {
           fill: "rgba(5, 5, 5, 0.96)",
           border: this.purchaseTarget.color || "#ff91d7"
         });
-        renderer.drawCenteredText(this.game.t("store.purchasePrompt"), 246, {
-          size: 32,
+        renderer.drawCenteredText(this.game.t("store.purchasePrompt"), isPortrait ? 382 : 246, {
+          size: isPortrait ? 24 : 32,
           color: this.purchaseTarget.color || "#ff91d7",
           shadow: true
         });
-        renderer.drawCenteredText(skinText(this.game, this.purchaseTarget, "name"), 294, {
-          size: 30,
+        renderer.drawCenteredText(skinText(this.game, this.purchaseTarget, "name"), isPortrait ? 418 : 294, {
+          size: isPortrait ? 24 : 30,
           color: "#f4f0da"
         });
-        renderer.drawCenteredText(formatPrice(this.game, this.purchaseTarget), 334, {
-          size: 22,
+        renderer.drawCenteredText(formatPrice(this.game, this.purchaseTarget), isPortrait ? 450 : 334, {
+          size: isPortrait ? 18 : 22,
           color: "#fff1c4"
         });
-        renderer.drawParagraph(this.game.t("store.purchaseNote"), 270, 388, 420, {
-          size: 18,
-          lineHeight: 26,
+        renderer.drawParagraph(this.game.t("store.purchaseNote"), isPortrait ? 58 : 270, isPortrait ? 500 : 388, isPortrait ? 424 : 420, {
+          size: isPortrait ? 15 : 18,
+          lineHeight: isPortrait ? 22 : 26,
           color: "#f4e0b6"
         });
-        renderer.drawParagraph(this.game.t("store.confirmNote"), 270, 454, 420, {
-          size: 18,
-          lineHeight: 26,
+        renderer.drawParagraph(this.game.t("store.confirmNote"), isPortrait ? 58 : 270, isPortrait ? 558 : 454, isPortrait ? 424 : 420, {
+          size: isPortrait ? 15 : 18,
+          lineHeight: isPortrait ? 22 : 26,
           color: "#d8c8a4"
         });
 
@@ -528,7 +561,7 @@
             border: isConfirm ? (this.purchaseTarget.color || "#ff91d7") : "#d6d0ff"
           });
           renderer.drawText(isConfirm ? this.game.t("buttons.buy") : this.game.t("buttons.cancel"), dialogButtons[i].x + dialogButtons[i].width / 2, dialogButtons[i].y + 14, {
-            size: 24,
+            size: isPortrait ? 20 : 24,
             align: "center",
             color: "#f4f0da"
           });

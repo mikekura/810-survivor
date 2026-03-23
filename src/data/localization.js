@@ -197,7 +197,15 @@
         haloSigil: { name: "Halo Sigil", desc: "Orbiting sigils slice nearby enemies on contact." },
         summerSword: { name: "Summer Sword", desc: "A forward crescent slash. Range and slash count grow." },
         breakerAxe: { name: "Breaker Axe", desc: "A heavy sweep with impact burst damage at the edge." },
-        mysticWand: { name: "Mystic Wand", desc: "Casts homing bolts with a glowing summoning ring." }
+        mysticWand: { name: "Mystic Wand", desc: "Casts homing bolts with a glowing summoning ring." },
+        thunderChain: { name: "Thunder Chain", desc: "Lightning jumps through nearby enemies in sequence." },
+        blizzardFan: { name: "Blizzard Fan", desc: "Sprays a cold fan of shards in front of you." },
+        crossLance: { name: "Cross Lance", desc: "Launches a cross-shaped burst from your position." },
+        boomerangDisc: { name: "Boomerang Disc", desc: "Throws heavy spinning discs that keep cutting through." },
+        petalStorm: { name: "Petal Storm", desc: "Releases a flower-like spiral burst around you." },
+        cometTrail: { name: "Comet Trail", desc: "Drops a chain of smaller meteors near the nearest crowd." },
+        vitalBloom: { name: "Vital Bloom", desc: "Periodic healing pulse that also hurts nearby enemies." },
+        overclockLoop: { name: "Overclock Loop", desc: "Pushes fire tempo, bullet speed, and special pace higher." }
       },
       pickups: {
         xp: "XP Crystal",
@@ -408,7 +416,15 @@
         haloSigil: { name: "\u30cf\u30ed\u30fc\u30b7\u30b8\u30eb", desc: "\u5468\u56de\u3059\u308b\u7d0b\u69d8\u304c\u8fd1\u3044\u6575\u3092\u5207\u308a\u88c2\u304f\u3002" },
         summerSword: { name: "\u30b5\u30de\u30fc\u30bd\u30fc\u30c9", desc: "\u524d\u65b9\u3092\u65ac\u308b\u5f27\u72b6\u30b9\u30e9\u30c3\u30b7\u30e5\u3002\u5c04\u7a0b\u3068\u8ffd\u65ac\u304c\u4f38\u3073\u308b\u3002" },
         breakerAxe: { name: "\u30d6\u30ec\u30a4\u30ab\u30fc\u30a2\u30c3\u30af\u30b9", desc: "\u91cd\u3044\u6a2a\u8599\u304e\u3002\u5203\u5148\u3067\u8ffd\u52a0\u885d\u6483\u304c\u767a\u751f\u3059\u308b\u3002" },
-        mysticWand: { name: "\u9b54\u6cd5\u306e\u6756", desc: "\u9b54\u6cd5\u9663\u3068\u3068\u3082\u306b\u8ffd\u5c3e\u5f3e\u3092\u653e\u3064\u3002" }
+        mysticWand: { name: "\u9b54\u6cd5\u306e\u6756", desc: "\u9b54\u6cd5\u9663\u3068\u3068\u3082\u306b\u8ffd\u5c3e\u5f3e\u3092\u653e\u3064\u3002" },
+        thunderChain: { name: "\u30b5\u30f3\u30c0\u30fc\u30c1\u30a7\u30a4\u30f3", desc: "\u96fb\u6483\u304c\u8fd1\u304f\u306e\u6575\u3078\u9023\u9396\u3057\u3066\u98db\u3076\u3002" },
+        blizzardFan: { name: "\u30d6\u30ea\u30b6\u30fc\u30c9\u30d5\u30a1\u30f3", desc: "\u524d\u65b9\u306b\u51b7\u6c17\u306e\u7834\u7247\u3092\u6247\u72b6\u306b\u307e\u304d\u6563\u3089\u3059\u3002" },
+        crossLance: { name: "\u30af\u30ed\u30b9\u30e9\u30f3\u30b9", desc: "\u81ea\u5206\u3092\u4e2d\u5fc3\u306b\u5341\u5b57\u5f62\u306e\u5f3e\u5e55\u3092\u653e\u3064\u3002" },
+        boomerangDisc: { name: "\u30d6\u30fc\u30e1\u30e9\u30f3\u30c7\u30a3\u30b9\u30af", desc: "\u91cd\u3044\u56de\u8ee2\u5203\u3092\u6295\u3052\u3001\u9577\u304f\u654c\u3092\u5207\u308a\u7d9a\u3051\u308b\u3002" },
+        petalStorm: { name: "\u30da\u30bf\u30eb\u30b9\u30c8\u30fc\u30e0", desc: "\u82b1\u3073\u3089\u72b6\u306e\u87ba\u65cb\u5f3e\u5e55\u3092\u5468\u56f2\u306b\u5e83\u3052\u308b\u3002" },
+        cometTrail: { name: "\u30b3\u30e1\u30c3\u30c8\u30c8\u30ec\u30a4\u30eb", desc: "\u6700\u3082\u8fd1\u3044\u6575\u7fa4\u306e\u8fd1\u304f\u306b\u5c0f\u96a8\u77f3\u3092\u9023\u7d9a\u3067\u843d\u3068\u3059\u3002" },
+        vitalBloom: { name: "\u30d0\u30a4\u30bf\u30eb\u30d6\u30eb\u30fc\u30e0", desc: "\u5b9a\u671f\u7684\u306a\u56de\u5fa9\u30d1\u30eb\u30b9\u304c\u8fd1\u304f\u306e\u6575\u306b\u3082\u30c0\u30e1\u30fc\u30b8\u3092\u4e0e\u3048\u308b\u3002" },
+        overclockLoop: { name: "\u30aa\u30fc\u30d0\u30fc\u30af\u30ed\u30c3\u30af\u30eb\u30fc\u30d7", desc: "\u9023\u5c04\u30c6\u30f3\u30dd\u3001\u5f3e\u901f\u3001\u7279\u6b8a\u653b\u6483\u306e\u56de\u8ee2\u3092\u307e\u3068\u3081\u3066\u5f37\u5316\u3002" }
       },
       pickups: {
         xp: "XP\u7d50\u6676",
