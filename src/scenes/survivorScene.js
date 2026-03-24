@@ -2116,9 +2116,9 @@
       if (ns.constants.IS_MOBILE_PORTRAIT) {
         return {
           x: 36,
-          y: 368 + index * 88,
+          y: 360 + index * 84,
           width: 468,
-          height: 76
+          height: 78
         };
       }
       return {
@@ -2131,7 +2131,7 @@
 
     getMerchantLeaveRect() {
       if (ns.constants.IS_MOBILE_PORTRAIT) {
-        return { x: 350, y: 774, width: 154, height: 46 };
+        return { x: 350, y: 846, width: 154, height: 46 };
       }
       return { x: 650, y: 566, width: 128, height: 46 };
     }
@@ -4958,10 +4958,10 @@
     getLevelUpCardRect(index) {
       if (ns.constants.IS_MOBILE_PORTRAIT) {
         return {
-          x: 32,
-          y: 170 + index * 172,
-          width: 476,
-          height: 148
+          x: 24,
+          y: 162 + index * 168,
+          width: 492,
+          height: 156
         };
       }
       return {
@@ -7687,7 +7687,7 @@
         ctx.fillRect(0, 0, ns.constants.GAME_WIDTH, ns.constants.GAME_HEIGHT);
         ctx.restore();
 
-        renderer.drawPanel(mobilePanelX, mobilePanelY, mobileWidth, 700, {
+        renderer.drawPanel(mobilePanelX, mobilePanelY, mobileWidth, 780, {
           fill: "rgba(30, 18, 24, 0.96)",
           border: "#ff91d7"
         });
@@ -7731,10 +7731,10 @@
 
         for (i = 0; i < this.merchant.offers.length; i += 1) {
           var mobileOffer = this.merchant.offers[i];
-          var mobileRowY = mobilePanelY + 248 + i * 88;
+          var mobileRowY = mobilePanelY + 240 + i * 84;
           var mobileSelected = i === this.merchant.selected;
           var mobileHovered = i === this.merchant.hover;
-          renderer.drawPanel(mobilePanelX + 18, mobileRowY, 468, 76, {
+          renderer.drawPanel(mobilePanelX + 18, mobileRowY, 468, 78, {
             fill: mobileSelected || mobileHovered ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.22)",
             border: mobileOffer.soldOut ? "#5a5048" : mobileSelected ? mobileOffer.color : mobileHovered ? "#fff1c4" : "#5f4423"
           });
@@ -7754,11 +7754,11 @@
           });
         }
 
-        renderer.drawPanel(mobilePanelX + 332, mobilePanelY + 654, 154, 46, {
+        renderer.drawPanel(mobilePanelX + 332, mobilePanelY + 726, 154, 46, {
           fill: "rgba(8, 8, 8, 0.92)",
           border: "#d6d0ff"
         });
-        renderer.drawText(this.game.t("buttons.leave"), mobilePanelX + 409, mobilePanelY + 666, {
+        renderer.drawText(this.game.t("buttons.leave"), mobilePanelX + 409, mobilePanelY + 738, {
           size: 18,
           align: "center",
           color: "#d6d0ff"
