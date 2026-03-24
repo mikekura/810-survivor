@@ -64,7 +64,11 @@
     forgeSmith: { label: "Forge Smith", category: "ranged", hp: 76, speed: 0.82, damage: 18, xp: 5, tags: ["smith"] },
     brainGolem: { label: "Brain Golem", category: "wall", hp: 132, speed: 0.34, damage: 22, xp: 6, tags: ["heavy"] },
     cometHeron: { label: "Comet Heron", category: "rush", hp: 42, speed: 1.56, damage: 13, xp: 3, tags: ["dash", "flying"] },
-    abyssPriest: { label: "Abyss Priest", category: "elite", hp: 540, speed: 0.92, damage: 28, xp: 32, tags: ["elite", "relic"] }
+    abyssPriest: { label: "Abyss Priest", category: "elite", hp: 540, speed: 0.92, damage: 28, xp: 32, tags: ["elite", "relic"] },
+    neonProwler: { label: "Neon Prowler", category: "rush", hp: 52, speed: 1.68, damage: 15, xp: 3, tags: ["dash", "zigzag"] },
+    paperMask: { label: "Paper Mask", category: "disruptor", hp: 68, speed: 1.08, damage: 16, xp: 4, tags: ["festival", "curse"] },
+    steamKettle: { label: "Steam Kettle", category: "ranged", hp: 92, speed: 0.8, damage: 19, xp: 5, tags: ["steam", "heavy-shot"] },
+    relayBishop: { label: "Relay Bishop", category: "elite", hp: 690, speed: 0.96, damage: 32, xp: 36, tags: ["elite", "relay"] }
   });
 
   if (ns.survivorSpawnTables.stages.stationFront) {
@@ -87,45 +91,60 @@
     pack("signalCrab", 24, 2, 4, "edge-stream")
   ]);
   pushGroups("stationFront", "midPrep", [
-    pack("iceCreamBat", 20, 2, 4, "rear-pulse")
+    pack("iceCreamBat", 20, 2, 4, "rear-pulse"),
+    pack("neonProwler", 16, 2, 3, "cross-dash", { minRank: 2 })
   ]);
   pushGroups("stationFront", "pressure1", [
-    pack("toastPhantom", 20, 1, 2, "front-arc", { minRank: 2 })
+    pack("toastPhantom", 20, 1, 2, "front-arc", { minRank: 2 }),
+    pack("neonProwler", 18, 2, 4, "cross-dash", { minRank: 3 })
   ]);
   pushGroups("shoppingStreet", "pressure1", [
-    pack("speakerTotem", 18, 1, 2, "bomb-arc")
+    pack("speakerTotem", 18, 1, 2, "bomb-arc"),
+    pack("paperMask", 18, 1, 2, "front-arc", { minRank: 3 })
   ]);
   pushGroups("shoppingStreet", "midPrep", [
-    pack("forgeSmith", 18, 1, 2, "rear-pulse", { minRank: 3 })
+    pack("forgeSmith", 18, 1, 2, "rear-pulse", { minRank: 3 }),
+    pack("steamKettle", 16, 1, 2, "bomb-arc", { minRank: 4 })
   ]);
   pushGroups("shoppingStreet", "mixedLate", [
-    pack("shadeRunner", 20, 2, 4, "cross-dash", { minRank: 4 })
+    pack("shadeRunner", 20, 2, 4, "cross-dash", { minRank: 4 }),
+    pack("neonProwler", 18, 2, 4, "cross-dash", { minRank: 5 }),
+    pack("paperMask", 14, 1, 2, "front-arc", { minRank: 5 })
   ]);
   pushGroups("poolSide", "opening", [
     pack("iceCreamBat", 20, 2, 3, "waterline")
   ]);
   pushGroups("poolSide", "pressure1", [
-    pack("cometHeron", 20, 2, 4, "cross-dash", { minRank: 4 })
+    pack("cometHeron", 20, 2, 4, "cross-dash", { minRank: 4 }),
+    pack("neonProwler", 14, 2, 3, "lane-wall", { minRank: 5 })
   ]);
   pushGroups("poolSide", "midPrep", [
-    pack("mirrorMoth", 22, 1, 2, "front-arc", { minRank: 4 })
+    pack("mirrorMoth", 22, 1, 2, "front-arc", { minRank: 4 }),
+    pack("steamKettle", 12, 1, 1, "rear-pulse", { minRank: 5 })
   ]);
   pushGroups("festivalGround", "pressure1", [
-    pack("speakerTotem", 22, 1, 2, "bomb-arc")
+    pack("speakerTotem", 22, 1, 2, "bomb-arc"),
+    pack("paperMask", 20, 2, 3, "front-arc", { minRank: 4 })
   ]);
   pushGroups("festivalGround", "midPrep", [
     pack("toastPhantom", 18, 1, 2, "front-arc", { minRank: 5 }),
-    pack("brainGolem", 16, 1, 2, "edge-wall", { minRank: 6 })
+    pack("brainGolem", 16, 1, 2, "edge-wall", { minRank: 6 }),
+    pack("steamKettle", 15, 1, 2, "bomb-arc", { minRank: 6 })
   ]);
   pushGroups("festivalGround", "crisis1544", [
-    pack("sunspotMine", 22, 1, 2, "edge-wall", { minRank: 6 })
+    pack("sunspotMine", 22, 1, 2, "edge-wall", { minRank: 6 }),
+    pack("relayBishop", 10, 1, 1, "front-arc", { minRank: 9 })
   ]);
   pushGroups("clockTower", "elitePrep", [
-    pack("shadeRunner", 24, 2, 4, "cross-dash")
+    pack("shadeRunner", 24, 2, 4, "cross-dash"),
+    pack("neonProwler", 22, 2, 4, "cross-dash", { minRank: 6 })
   ]);
   pushGroups("clockTower", "mixedLate", [
     pack("mirrorMoth", 20, 1, 2, "front-arc", { minRank: 6 }),
+    pack("paperMask", 18, 1, 2, "front-arc", { minRank: 7 }),
+    pack("steamKettle", 16, 1, 2, "bomb-arc", { minRank: 7 }),
     pack("heatIdol", 14, 1, 1, "rear-pulse", { minRank: 8 }),
-    pack("abyssPriest", 12, 1, 1, "front-arc", { minRank: 9 })
+    pack("abyssPriest", 12, 1, 1, "front-arc", { minRank: 9 }),
+    pack("relayBishop", 10, 1, 1, "front-arc", { minRank: 10 })
   ]);
 })(window.ManatsuRPG = window.ManatsuRPG || {});

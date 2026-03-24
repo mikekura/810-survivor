@@ -8,6 +8,18 @@
   var DESPAWN_DISTANCE = 1700;
   var LEVELUP_CARD_WIDTH = 430;
   var LEVELUP_CARD_HEIGHT = 116;
+  var TAG_RESONANCE_THRESHOLD = 3;
+  var MASTERY_THRESHOLDS = [10, 30, 70];
+  var TRUE_EVOLUTION_IDS = ["solarRequiem", "glacierSanctuary", "phantomMirage"];
+  var TAG_COLORS = {
+    fire: "#ff9f76",
+    ice: "#9feeff",
+    lightning: "#b8c7ff",
+    slash: "#ffc68f",
+    deploy: "#ffa6dd",
+    homing: "#9fd4ff",
+    heal: "#9cffb8"
+  };
 
   var STAGE_THEMES = {
     stationFront: { label: "Station Front", bg: "#1b120d", tileA: "#2a1a13", tileB: "#352116", accent: "#ffb347", lane: "#6f4731", prop: "#84523c", glow: "#ffe2a8" },
@@ -51,7 +63,62 @@
     emberFork: { color: "#ffb07a", maxLevel: 5, weight: 5 },
     prismRail: { color: "#b7c8ff", maxLevel: 5, weight: 5 },
     frostMine: { color: "#9feeff", maxLevel: 4, weight: 4 },
-    spiralDrive: { color: "#ffa6dd", maxLevel: 5, weight: 5 }
+    spiralDrive: { color: "#ffa6dd", maxLevel: 5, weight: 5 },
+    solarRequiem: { color: "#ffd76f", maxLevel: 1, weight: 24, hidden: true, trueEvolution: true },
+    glacierSanctuary: { color: "#9feeff", maxLevel: 1, weight: 24, hidden: true, trueEvolution: true },
+    phantomMirage: { color: "#d0b8ff", maxLevel: 1, weight: 24, hidden: true, trueEvolution: true }
+  };
+
+  var UPGRADE_TAGS = {
+    powerShirt: ["slash"],
+    coldMugicha: ["ice", "heal"],
+    quickStep: ["slash"],
+    pickupAura: ["deploy"],
+    thickNeck: ["heal"],
+    ramuneOrbit: ["deploy"],
+    summerPulse: ["deploy"],
+    sunbeam810: ["fire", "lightning"],
+    pierceSandal: ["slash"],
+    yarimasuNee: ["slash"],
+    afterimageStep: ["slash", "fire"],
+    saltGuard: ["deploy", "slash"],
+    lucky810: ["heal"],
+    droneBuddy: ["deploy", "homing"],
+    backstepVolley: ["slash"],
+    heatSink: ["fire", "lightning"],
+    neonNeedle: ["homing", "lightning"],
+    meteorCall: ["fire"],
+    haloSigil: ["deploy", "slash"],
+    summerSword: ["slash"],
+    breakerAxe: ["slash"],
+    mysticWand: ["homing"],
+    thunderChain: ["lightning"],
+    blizzardFan: ["ice"],
+    crossLance: ["slash"],
+    boomerangDisc: ["slash"],
+    petalStorm: ["deploy"],
+    cometTrail: ["fire"],
+    vitalBloom: ["heal", "deploy"],
+    overclockLoop: ["lightning"],
+    emberFork: ["fire"],
+    prismRail: ["lightning", "slash"],
+    frostMine: ["ice", "deploy"],
+    spiralDrive: ["deploy", "slash"],
+    solarRequiem: ["fire", "lightning", "slash"],
+    glacierSanctuary: ["ice", "deploy", "heal"],
+    phantomMirage: ["homing", "deploy", "lightning"]
+  };
+
+  var TRUE_EVOLUTION_RULES = {
+    solarRequiem: {
+      requires: ["summerSword", "emberFork", "thunderChain"]
+    },
+    glacierSanctuary: {
+      requires: ["blizzardFan", "frostMine", "vitalBloom"]
+    },
+    phantomMirage: {
+      requires: ["mysticWand", "neonNeedle", "droneBuddy"]
+    }
   };
 
   function clamp(value, min, max) {
@@ -194,6 +261,10 @@
       default:
         return game.upgradeDescription(upgradeId, {});
     }
+  }
+
+  function getUpgradeTags(upgradeId) {
+    return UPGRADE_TAGS[upgradeId] ? UPGRADE_TAGS[upgradeId].slice() : [];
   }
 
   function getMetaText(game, entry, key) {
@@ -628,8 +699,15 @@
       this.levelUpChoices = null;
       this.levelUpSelected = 0;
       this.levelUpHover = -1;
+      this.levelUpRerollHover = false;
       this.upgradeLevels = {};
       this.acquiredUpgrades = [];
+      this.tagCounts = {};
+      this.tagResonance = {};
+      this.skillMastery = {};
+      this.skillMasteryTimers = {};
+      this.skillCueTimers = {};
+      this.levelUpRerolls = this.isBotMode ? 0 : 3;
       this.camera = { x: 0, y: 0 };
       this.specialInventory = {};
       this.activeFusions = {};
@@ -680,16 +758,16 @@
         vx: 0,
         vy: 0,
         radius: 24,
-        hp: 120,
-        maxHp: 120,
+        hp: 114,
+        maxHp: 114,
         speed: 260,
         fireCooldown: 0.1,
-        fireRate: 0.36,
+        fireRate: 0.38,
         bulletSpeed: 680,
-        damage: 32,
+        damage: 29,
         level: 1,
         xp: 0,
-        xpForNext: 12,
+        xpForNext: 14,
         coins: 0,
         pickupRange: 96,
         kills: 0,
@@ -743,6 +821,9 @@
         prismRailCooldown: 0.96,
         frostMineCooldown: 1.34,
         spiralDriveCooldown: 0.92,
+        solarRequiemCooldown: 8.8,
+        glacierSanctuaryCooldown: 10.4,
+        phantomMirageCooldown: 7.8,
         xpGainMultiplier: 1,
         specialCooldownFactor: 1,
         frenzyTimer: 0,
@@ -754,7 +835,7 @@
       };
 
       if (this.isBotMode) {
-        this.player.xpForNext = 8;
+        this.player.xpForNext = 10;
       }
 
       this.refreshBuildStats(false);
@@ -1022,6 +1103,24 @@
           profile.trailColor = "#ffe3f3";
           profile.accentColor = "#ff74bf";
           break;
+        case "solarRequiem":
+          profile = this.getWeaponVisual("axe");
+          profile.color = "#ffd76f";
+          profile.trailColor = "#fff1c4";
+          profile.accentColor = "#ff9f76";
+          break;
+        case "glacierSanctuary":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#9feeff";
+          profile.trailColor = "#e6ffff";
+          profile.accentColor = "#9cffb8";
+          break;
+        case "phantomMirage":
+          profile = this.getWeaponVisual("wand");
+          profile.color = "#d0b8ff";
+          profile.trailColor = "#eee5ff";
+          profile.accentColor = "#9fd4ff";
+          break;
         default:
           profile = this.getWeaponVisual("wand");
           profile.color = this.getSkinShotVisual("bullet", profile.color).color;
@@ -1033,12 +1132,25 @@
 
     spawnSkillSignature(skillId, x, y, options) {
       var visual = this.getSkillVisual(skillId);
+      var bonus = this.getSkillBonusState(skillId);
       var opts = options || {};
-      var power = opts.power || 1;
+      var power = (opts.power || 1) + bonus.tier * 0.12 + (bonus.countBonus > 0 ? 0.08 : 0);
       var angle = typeof opts.angle === "number" ? opts.angle : this.player.facingAngle;
-      var ringRadius = opts.radius || (16 + power * 8);
+      var ringRadius = (opts.radius || (16 + power * 8)) * bonus.areaMul;
 
       this.spawnWeaponMotifFx(x, y, visual, power);
+
+      if (!this.skillMasteryTimers[skillId] || this.skillMasteryTimers[skillId] <= 0) {
+        this.recordSkillUse(skillId, opts.masteryAmount || 1);
+        this.skillMasteryTimers[skillId] = 0.65;
+      }
+      if (this.game.audio && this.game.audio.playSkillCue && (!this.skillCueTimers[skillId] || this.skillCueTimers[skillId] <= 0)) {
+        this.game.audio.playSkillCue(skillId, {
+          tier: bonus.tier,
+          resonance: bonus.tags.some((tag) => this.tagResonance[tag])
+        });
+        this.skillCueTimers[skillId] = 0.2;
+      }
 
       if (skillId === "sunbeam810" || skillId === "meteorCall" || skillId === "cometTrail" || skillId === "thunderChain" || skillId === "prismRail") {
         this.effects.spawnRadialStreakBurst(x, y, {
@@ -1423,11 +1535,13 @@
     }
 
     getSpawnIntensity() {
-      var base = Math.floor(this.score / 12000);
+      var base = Math.floor(this.score / 9000);
       if (this.isBotMode) {
-        base += Math.floor(this.elapsedSec / 50);
+        base += Math.floor(this.elapsedSec / 40);
       } else if (this.isInfinityMode) {
-        base += Math.floor(this.elapsedSec / 90);
+        base += Math.floor(this.elapsedSec / 60);
+      } else {
+        base += Math.floor(this.elapsedSec / 150);
       }
       return base;
     }
@@ -1438,33 +1552,33 @@
 
     getEnemyTimeTier() {
       if (this.isBotMode) {
-        return Math.floor(this.elapsedSec / 40);
+        return Math.floor(this.elapsedSec / 32);
       }
       if (this.isInfinityMode) {
-        return Math.floor(this.elapsedSec / 70);
+        return Math.floor(this.elapsedSec / 55);
       }
-      return Math.floor(this.elapsedSec / 100);
+      return Math.floor(this.elapsedSec / 82);
     }
 
     getEnemyTimeRates() {
       if (this.isBotMode) {
         return {
-          hp: 1.09,
-          speed: 1.016,
-          damage: 1.055
+          hp: 1.105,
+          speed: 1.02,
+          damage: 1.07
         };
       }
       if (this.isInfinityMode) {
         return {
-          hp: 1.07,
-          speed: 1.013,
-          damage: 1.045
+          hp: 1.095,
+          speed: 1.018,
+          damage: 1.062
         };
       }
       return {
-        hp: 1.05,
-        speed: 1.01,
-        damage: 1.035
+        hp: 1.07,
+        speed: 1.013,
+        damage: 1.045
       };
     }
 
@@ -1472,14 +1586,18 @@
       var scoreTier = this.getSpawnIntensity();
       var timeTier = this.getEnemyTimeTier();
       var timeRates = this.getEnemyTimeRates();
-      var hpScale = 1 + Math.min(3.6, scoreTier * 0.07);
-      var speedScale = 1 + Math.min(0.9, scoreTier * 0.018);
-      var damageScale = 1 + Math.min(2.6, scoreTier * 0.05);
+      var hpScale = 1 + Math.min(4.4, scoreTier * 0.085);
+      var speedScale = 1 + Math.min(1.05, scoreTier * 0.024);
+      var damageScale = 1 + Math.min(3.2, scoreTier * 0.062);
 
       if (this.isBotMode) {
-        hpScale *= 1.08;
-        speedScale *= 1.06;
-        damageScale *= 1.08;
+        hpScale *= 1.12;
+        speedScale *= 1.08;
+        damageScale *= 1.12;
+      } else if (this.isInfinityMode) {
+        hpScale *= 1.06;
+        speedScale *= 1.04;
+        damageScale *= 1.07;
       }
 
       return {
@@ -1785,6 +1903,178 @@
 
     getUpgradeLevel(upgradeId) {
       return this.upgradeLevels[upgradeId] || 0;
+    }
+
+    getUpgradeTags(upgradeId) {
+      return getUpgradeTags(upgradeId);
+    }
+
+    getTagLabel(tagId) {
+      return translate(this.game, "tags." + tagId);
+    }
+
+    getUpgradeTagLine(upgradeId) {
+      var tags = this.getUpgradeTags(upgradeId);
+      var i;
+      if (!tags.length) {
+        return "";
+      }
+      for (i = 0; i < tags.length; i += 1) {
+        tags[i] = this.getTagLabel(tags[i]) + (this.tagResonance[tags[i]] ? "*" : "");
+      }
+      return tags.join(" / ");
+    }
+
+    getSkillMasteryValue(upgradeId) {
+      return this.skillMastery[upgradeId] || 0;
+    }
+
+    getSkillMasteryTier(upgradeId) {
+      var value = this.getSkillMasteryValue(upgradeId);
+      if (value >= MASTERY_THRESHOLDS[2]) {
+        return 3;
+      }
+      if (value >= MASTERY_THRESHOLDS[1]) {
+        return 2;
+      }
+      if (value >= MASTERY_THRESHOLDS[0]) {
+        return 1;
+      }
+      return 0;
+    }
+
+    getUpgradeMetaLine(upgradeId) {
+      var tagLine = this.getUpgradeTagLine(upgradeId);
+      var mastery = translate(this.game, "common.mastery") + " " + this.getSkillMasteryTier(upgradeId);
+      return tagLine ? tagLine + "  |  " + mastery : mastery;
+    }
+
+    getActiveResonanceSnapshot() {
+      var counts = {};
+      var active = {};
+      var acquired = this.acquiredUpgrades || [];
+      var i;
+      var j;
+      for (i = 0; i < acquired.length; i += 1) {
+        var upgradeId = acquired[i];
+        if (this.getUpgradeLevel(upgradeId) <= 0) {
+          continue;
+        }
+        var tags = this.getUpgradeTags(upgradeId);
+        for (j = 0; j < tags.length; j += 1) {
+          counts[tags[j]] = (counts[tags[j]] || 0) + 1;
+        }
+      }
+      Object.keys(counts).forEach(function (tag) {
+        if (counts[tag] >= TAG_RESONANCE_THRESHOLD) {
+          active[tag] = true;
+        }
+      });
+      return {
+        counts: counts,
+        active: active
+      };
+    }
+
+    isTrueEvolutionReady(upgradeId) {
+      var rule = TRUE_EVOLUTION_RULES[upgradeId];
+      var i;
+      if (!rule) {
+        return false;
+      }
+      for (i = 0; i < rule.requires.length; i += 1) {
+        if (this.getUpgradeLevel(rule.requires[i]) <= 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    getSkillBonusState(upgradeId) {
+      var tags = this.getUpgradeTags(upgradeId);
+      var tier = this.getSkillMasteryTier(upgradeId);
+      var bonus = {
+        tier: tier,
+        tags: tags,
+        damageMul: 1 + tier * 0.08,
+        areaMul: 1 + tier * 0.05,
+        countBonus: tier >= 3 ? 1 : 0,
+        cooldownMul: Math.max(0.7, 1 - tier * 0.05),
+        healBonus: tier,
+        turnBonus: tier * 0.6,
+        pierceBonus: tier >= 2 ? 1 : 0
+      };
+
+      if (tags.indexOf("fire") >= 0 && this.tagResonance.fire) {
+        bonus.damageMul += 0.12;
+        bonus.countBonus += 1;
+      }
+      if (tags.indexOf("ice") >= 0 && this.tagResonance.ice) {
+        bonus.areaMul += 0.08;
+        bonus.cooldownMul -= 0.08;
+      }
+      if (tags.indexOf("lightning") >= 0 && this.tagResonance.lightning) {
+        bonus.damageMul += 0.08;
+        bonus.cooldownMul -= 0.06;
+        bonus.countBonus += 1;
+      }
+      if (tags.indexOf("slash") >= 0 && this.tagResonance.slash) {
+        bonus.areaMul += 0.1;
+        bonus.damageMul += 0.06;
+        bonus.countBonus += 1;
+        bonus.pierceBonus += 1;
+      }
+      if (tags.indexOf("deploy") >= 0 && this.tagResonance.deploy) {
+        bonus.areaMul += 0.12;
+        bonus.cooldownMul -= 0.05;
+        bonus.countBonus += 1;
+      }
+      if (tags.indexOf("homing") >= 0 && this.tagResonance.homing) {
+        bonus.damageMul += 0.05;
+        bonus.countBonus += 1;
+        bonus.turnBonus += 1.8;
+      }
+      if (tags.indexOf("heal") >= 0 && this.tagResonance.heal) {
+        bonus.areaMul += 0.06;
+        bonus.cooldownMul -= 0.04;
+        bonus.healBonus += 3;
+      }
+
+      bonus.countBonus = Math.min(2, bonus.countBonus);
+      bonus.cooldownMul = Math.max(0.58, bonus.cooldownMul);
+      return bonus;
+    }
+
+    recordSkillUse(upgradeId, amount) {
+      var currentTier;
+      var nextTier;
+      var gain = Math.max(1, amount || 1);
+      if (!UPGRADE_CATALOG[upgradeId]) {
+        return;
+      }
+      currentTier = this.getSkillMasteryTier(upgradeId);
+      this.skillMastery[upgradeId] = this.getSkillMasteryValue(upgradeId) + gain;
+      nextTier = this.getSkillMasteryTier(upgradeId);
+      if (nextTier > currentTier) {
+        this.pushMessage(
+          translate(this.game, "survivor.masteryUp", {
+            skill: getUpgradeName(this.game, upgradeId),
+            tier: nextTier
+          }),
+          1.3,
+          "#d6d0ff"
+        );
+      }
+    }
+
+    updateSkillStateTimers(dt) {
+      var self = this;
+      Object.keys(this.skillMasteryTimers).forEach(function (key) {
+        self.skillMasteryTimers[key] = Math.max(0, self.skillMasteryTimers[key] - dt);
+      });
+      Object.keys(this.skillCueTimers).forEach(function (key) {
+        self.skillCueTimers[key] = Math.max(0, self.skillCueTimers[key] - dt);
+      });
     }
 
     awardCoins(amount, x, y) {
@@ -2202,6 +2492,7 @@
     }
 
     refreshBuildStats(healOnGrow) {
+      var tagSnapshot = this.getActiveResonanceSnapshot();
       var previousMax = this.player.maxHp || 120;
       var hpRatio = previousMax > 0 ? this.player.hp / previousMax : 1;
       var damageLevel = this.getUpgradeLevel("powerShirt");
@@ -2238,52 +2529,72 @@
       var prismRailLevel = this.getUpgradeLevel("prismRail");
       var frostMineLevel = this.getUpgradeLevel("frostMine");
       var spiralDriveLevel = this.getUpgradeLevel("spiralDrive");
+      var solarRequiemLevel = this.getUpgradeLevel("solarRequiem");
+      var glacierSanctuaryLevel = this.getUpgradeLevel("glacierSanctuary");
+      var phantomMirageLevel = this.getUpgradeLevel("phantomMirage");
       var fusionBurst = !!this.activeFusions.burstVacation;
       var fusionGentle = !!this.activeFusions.gentleWave;
       var fusionNova = !!this.activeFusions.vacuumNova;
       var fusionDrive = !!this.activeFusions.summerOverdrive;
       var trueSolar = !!this.activeTrueFusions.solarMyth;
       var trueTide = !!this.activeTrueFusions.tidalSanctuary;
+      var fireResonance;
+      var iceResonance;
+      var lightningResonance;
+      var slashResonance;
+      var deployResonance;
+      var homingResonance;
+      var healResonance;
 
-      this.player.maxHp = 120 + neckLevel * 16 + vitalBloomLevel * 10 + (fusionGentle ? 30 : 0) + (trueTide ? 54 : 0);
-      this.player.speed = 260 + speedLevel * 20 + (fusionDrive ? 22 : 0) + (trueSolar ? 26 : 0);
-      this.player.fireRate = Math.max(0.09, 0.36 - fireLevel * 0.03 - overclockLevel * 0.01 - (fusionBurst ? 0.04 : 0) - (trueSolar ? 0.05 : 0));
-      this.player.damage = 32 + damageLevel * 9 + heatSinkLevel * 2 + overclockLevel * 3 + vitalBloomLevel * 2 + (fusionBurst ? 14 : 0) + (fusionDrive ? 10 : 0) + (trueSolar ? 20 : 0);
-      this.player.pickupRange = 96 + magnetLevel * 26 + (fusionNova ? 60 : 0) + (fusionGentle ? 30 : 0) + (trueTide ? 80 : 0);
-      this.player.armor = neckLevel * 1.4 + shellLevel * 0.5 + (fusionGentle ? 2.5 : 0) + (trueTide ? 3.5 : 0);
-      this.player.pierce = pierceLevel + Math.floor(heatSinkLevel / 2);
-      this.player.orbitLevel = orbitLevel;
+      this.tagCounts = tagSnapshot.counts;
+      this.tagResonance = tagSnapshot.active;
+      fireResonance = !!this.tagResonance.fire;
+      iceResonance = !!this.tagResonance.ice;
+      lightningResonance = !!this.tagResonance.lightning;
+      slashResonance = !!this.tagResonance.slash;
+      deployResonance = !!this.tagResonance.deploy;
+      homingResonance = !!this.tagResonance.homing;
+      healResonance = !!this.tagResonance.heal;
+
+      this.player.maxHp = 114 + neckLevel * 15 + vitalBloomLevel * 10 + (fusionGentle ? 28 : 0) + (trueTide ? 50 : 0) + (healResonance ? 16 : 0) + glacierSanctuaryLevel * 26;
+      this.player.speed = 252 + speedLevel * 18 + (fusionDrive ? 20 : 0) + (trueSolar ? 24 : 0) + (lightningResonance ? 10 : 0) + phantomMirageLevel * 8;
+      this.player.fireRate = Math.max(0.11, 0.38 - fireLevel * 0.028 - overclockLevel * 0.01 - (fusionBurst ? 0.035 : 0) - (trueSolar ? 0.045 : 0) - (solarRequiemLevel ? 0.025 : 0));
+      this.player.damage = 29 + damageLevel * 8 + heatSinkLevel * 2 + overclockLevel * 3 + vitalBloomLevel * 2 + (fusionBurst ? 12 : 0) + (fusionDrive ? 8 : 0) + (trueSolar ? 18 : 0) + (fireResonance ? 5 : 0) + (slashResonance ? 4 : 0) + (lightningResonance ? 3 : 0) + solarRequiemLevel * 16;
+      this.player.pickupRange = 96 + magnetLevel * 26 + (fusionNova ? 60 : 0) + (fusionGentle ? 30 : 0) + (trueTide ? 80 : 0) + (deployResonance ? 20 : 0) + glacierSanctuaryLevel * 36 + phantomMirageLevel * 12;
+      this.player.armor = neckLevel * 1.4 + shellLevel * 0.5 + (fusionGentle ? 2.5 : 0) + (trueTide ? 3.5 : 0) + (healResonance ? 1.5 : 0) + glacierSanctuaryLevel * 2;
+      this.player.pierce = pierceLevel + Math.floor(heatSinkLevel / 2) + (slashResonance ? 1 : 0);
+      this.player.orbitLevel = orbitLevel + (deployResonance && orbitLevel > 0 ? 1 : 0);
       this.player.pulseLevel = pulseLevel;
-      this.player.beamLevel = beamLevel + (trueSolar ? 1 : 0);
+      this.player.beamLevel = beamLevel + (trueSolar ? 1 : 0) + solarRequiemLevel;
       this.player.hypeLevel = hypeLevel;
       this.player.afterimageLevel = afterimageLevel;
       this.player.shellLevel = shellLevel;
       this.player.luckLevel = luckLevel;
-      this.player.droneLevel = droneLevel;
+      this.player.droneLevel = droneLevel + phantomMirageLevel + (homingResonance && droneLevel > 0 ? 1 : 0);
       this.player.backstepLevel = backstepLevel;
       this.player.heatSinkLevel = heatSinkLevel;
-      this.player.needleLevel = needleLevel;
+      this.player.needleLevel = needleLevel + phantomMirageLevel;
       this.player.meteorLevel = meteorLevel;
-      this.player.haloLevel = haloLevel;
-      this.player.swordLevel = swordLevel + (trueSolar ? 1 : 0);
+      this.player.haloLevel = haloLevel + (deployResonance && haloLevel > 0 ? 1 : 0);
+      this.player.swordLevel = swordLevel + (trueSolar ? 1 : 0) + solarRequiemLevel;
       this.player.axeLevel = axeLevel + (trueSolar ? 1 : 0);
-      this.player.wandLevel = wandLevel + (trueSolar ? 1 : 0);
-      this.player.thunderLevel = thunderLevel;
-      this.player.blizzardLevel = blizzardLevel;
+      this.player.wandLevel = wandLevel + (trueSolar ? 1 : 0) + phantomMirageLevel;
+      this.player.thunderLevel = thunderLevel + solarRequiemLevel;
+      this.player.blizzardLevel = blizzardLevel + glacierSanctuaryLevel;
       this.player.crossLevel = crossLevel;
       this.player.boomerangLevel = boomerangLevel;
-      this.player.petalLevel = petalLevel;
-      this.player.cometTrailLevel = cometTrailLevel;
-      this.player.vitalBloomLevel = vitalBloomLevel;
+      this.player.petalLevel = petalLevel + (deployResonance && petalLevel > 0 ? 1 : 0);
+      this.player.cometTrailLevel = cometTrailLevel + solarRequiemLevel;
+      this.player.vitalBloomLevel = vitalBloomLevel + glacierSanctuaryLevel;
       this.player.overclockLevel = overclockLevel;
-      this.player.emberForkLevel = emberForkLevel;
+      this.player.emberForkLevel = emberForkLevel + solarRequiemLevel;
       this.player.prismRailLevel = prismRailLevel;
-      this.player.frostMineLevel = frostMineLevel;
+      this.player.frostMineLevel = frostMineLevel + glacierSanctuaryLevel;
       this.player.spiralDriveLevel = spiralDriveLevel;
-      this.player.shotCount = 1 + Math.floor(hypeLevel / 2) + Math.floor(backstepLevel / 3) + (trueSolar ? 1 : 0);
-      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + overclockLevel * 35 + (fusionDrive ? 120 : 0) + (trueSolar ? 140 : 0);
-      this.player.xpGainMultiplier = 1 + luckLevel * 0.08 + (fusionBurst ? 0.12 : 0);
-      this.player.specialCooldownFactor = Math.max(0.34, 1 - heatSinkLevel * 0.08 - overclockLevel * 0.05 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0) - (trueSolar ? 0.08 : 0) - (trueTide ? 0.05 : 0));
+      this.player.shotCount = 1 + Math.floor(hypeLevel / 2) + Math.floor(backstepLevel / 3) + (trueSolar ? 1 : 0) + (homingResonance ? 1 : 0) + phantomMirageLevel;
+      this.player.bulletSpeed = 680 + heatSinkLevel * 55 + overclockLevel * 35 + (fusionDrive ? 120 : 0) + (trueSolar ? 140 : 0) + (lightningResonance ? 60 : 0) + solarRequiemLevel * 90;
+      this.player.xpGainMultiplier = 1 + luckLevel * 0.06 + (fusionBurst ? 0.1 : 0);
+      this.player.specialCooldownFactor = Math.max(0.4, 1 - heatSinkLevel * 0.08 - overclockLevel * 0.05 - (fusionNova ? 0.08 : 0) - (fusionDrive ? 0.12 : 0) - (trueSolar ? 0.08 : 0) - (trueTide ? 0.05 : 0) - (iceResonance ? 0.05 : 0) - (lightningResonance ? 0.04 : 0) - glacierSanctuaryLevel * 0.05);
 
       if (healOnGrow) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + 22);
@@ -2536,19 +2847,31 @@
 
     createPlayerShot(direction, options) {
       var opts = options || {};
+      var skillBonus = opts.skillId ? this.getSkillBonusState(opts.skillId) : null;
       var originX = typeof opts.originX === "number" ? opts.originX : this.player.x;
       var originY = typeof opts.originY === "number" ? opts.originY : this.player.y;
       var visual = this.getSkinShotVisual(opts.skinKind || opts.kind || "bullet", opts.color || "#7fe6ff");
+      var speed = (opts.speed || this.player.bulletSpeed) * (skillBonus ? 1 + Math.max(0, skillBonus.tier - 1) * 0.04 + (skillBonus.tags.indexOf("lightning") >= 0 && this.tagResonance.lightning ? 0.05 : 0) : 1);
+      var radius = (opts.radius || 6) * (skillBonus ? skillBonus.areaMul : 1);
+      var damage = Math.round((opts.damage || this.player.damage) * (skillBonus ? skillBonus.damageMul : 1));
+      var pierce = typeof opts.pierce === "number" ? opts.pierce : this.player.pierce;
+      var homing = opts.homing || 0;
+      var turnRate = opts.turnRate || 0;
+      if (skillBonus) {
+        pierce += skillBonus.pierceBonus;
+        homing += skillBonus.turnBonus * 0.3;
+        turnRate += skillBonus.turnBonus;
+      }
       this.projectiles.push({
         x: originX,
         y: originY,
-        vx: direction.x * (opts.speed || this.player.bulletSpeed),
-        vy: direction.y * (opts.speed || this.player.bulletSpeed),
-        radius: opts.radius || 6,
+        vx: direction.x * speed,
+        vy: direction.y * speed,
+        radius: radius,
         life: opts.life || 1.3,
-        damage: opts.damage || this.player.damage,
+        damage: damage,
         color: opts.color || visual.color,
-        pierce: typeof opts.pierce === "number" ? opts.pierce : this.player.pierce,
+        pierce: pierce,
         kind: opts.kind || "bullet",
         trailRate: typeof opts.trailRate === "number" ? opts.trailRate : visual.trailRate,
         trailTimer: typeof opts.trailRate === "number" ? opts.trailRate : visual.trailRate,
@@ -2557,8 +2880,8 @@
         shape: opts.shape || visual.shape,
         spin: typeof opts.spin === "number" ? opts.spin : visual.spin,
         age: 0,
-        homing: opts.homing || 0,
-        turnRate: opts.turnRate || 0,
+        homing: homing,
+        turnRate: turnRate,
         weaponKind: opts.weaponKind || ""
       });
       this.spawnSkinAttackFx(opts.skinKind || opts.kind || "bullet", originX, originY, visual);
@@ -3063,6 +3386,7 @@
 
     fireAfterimageBurst() {
       var level = this.player.afterimageLevel;
+      var bonus = this.getSkillBonusState("afterimageStep");
       var burstAngle;
       var count;
       var i;
@@ -3075,7 +3399,7 @@
       }
 
       burstAngle = this.player.facingAngle + Math.PI;
-      count = 1 + Math.floor((level + 1) / 2);
+      count = 1 + Math.floor((level + 1) / 2) + bonus.countBonus;
       originX = this.player.x + Math.cos(burstAngle) * (20 + level * 4);
       originY = this.player.y + Math.sin(burstAngle) * (20 + level * 4);
       visual = this.getSkillVisual("afterimageStep");
@@ -3092,6 +3416,7 @@
           radius: 5,
           life: 1.02,
           damage: Math.round(this.player.damage * (0.42 + level * 0.08)),
+          skillId: "afterimageStep",
           color: visual.color,
           trailColor: visual.trailColor,
           accentColor: visual.accentColor,
@@ -3208,6 +3533,7 @@
 
     fireSummerSword() {
       var level = this.player.swordLevel;
+      var bonus = this.getSkillBonusState("summerSword");
       var target = this.getNearestEnemy();
       var angle;
       var reach;
@@ -3224,13 +3550,13 @@
 
       angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
       this.player.facingAngle = angle;
-      reach = 112 + level * 18;
-      arcWidth = 1.02 + level * 0.08;
-      damage = Math.round(this.player.damage * 0.72 + 14 + level * 10);
+      reach = (112 + level * 18) * bonus.areaMul;
+      arcWidth = (1.02 + level * 0.08) * (1 + (bonus.areaMul - 1) * 0.6);
+      damage = Math.round((this.player.damage * 0.72 + 14 + level * 10) * bonus.damageMul);
       visual = this.getWeaponVisual("sword");
       tipX = this.player.x + Math.cos(angle) * (reach * 0.74);
       tipY = this.player.y + Math.sin(angle) * (reach * 0.74);
-      echoOffset = level >= 4 ? 0.18 : 0;
+      echoOffset = level >= 4 || bonus.countBonus > 0 ? 0.18 : 0;
 
       this.pushWeaponFx({
         kind: "slash",
@@ -3283,11 +3609,12 @@
         angle: angle,
         radius: 18 + level * 3
       });
-      this.player.swordCooldown = Math.max(0.28, 1.12 - level * 0.12) * this.player.specialCooldownFactor;
+      this.player.swordCooldown = Math.max(0.28, 1.12 - level * 0.12) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireBreakerAxe() {
       var level = this.player.axeLevel;
+      var bonus = this.getSkillBonusState("breakerAxe");
       var target = this.getNearestEnemy();
       var angle;
       var reach;
@@ -3305,10 +3632,10 @@
 
       angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
       this.player.facingAngle = angle;
-      reach = 124 + level * 16;
-      arcWidth = 0.88 + level * 0.05;
-      damage = Math.round(this.player.damage * 0.94 + 18 + level * 12);
-      impactRadius = 34 + level * 8;
+      reach = (124 + level * 16) * bonus.areaMul;
+      arcWidth = (0.88 + level * 0.05) * (1 + (bonus.areaMul - 1) * 0.5);
+      damage = Math.round((this.player.damage * 0.94 + 18 + level * 12) * bonus.damageMul);
+      impactRadius = (34 + level * 8) * bonus.areaMul;
       visual = this.getWeaponVisual("axe");
       tipX = this.player.x + Math.cos(angle) * (reach * 0.78);
       tipY = this.player.y + Math.sin(angle) * (reach * 0.78);
@@ -3362,11 +3689,12 @@
         angle: angle,
         radius: impactRadius * 0.5
       });
-      this.player.axeCooldown = Math.max(0.52, 1.7 - level * 0.16) * this.player.specialCooldownFactor;
+      this.player.axeCooldown = Math.max(0.52, 1.7 - level * 0.16) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireMysticWand() {
       var level = this.player.wandLevel;
+      var bonus = this.getSkillBonusState("mysticWand");
       var bolts;
       var target = this.getNearestEnemy();
       var angle;
@@ -3381,7 +3709,7 @@
 
       angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
       this.player.facingAngle = angle;
-      bolts = 1 + Math.floor(level / 2);
+      bolts = 1 + Math.floor(level / 2) + bonus.countBonus;
       visual = this.getWeaponVisual("wand");
       originX = this.player.x + Math.cos(angle) * 22;
       originY = this.player.y + Math.sin(angle) * 22;
@@ -3413,6 +3741,7 @@
           radius: 7,
           life: 1.9,
           damage: Math.round(this.player.damage * 0.56 + 9 + level * 8),
+          skillId: "mysticWand",
           color: visual.color,
           trailColor: visual.trailColor,
           accentColor: visual.accentColor,
@@ -3421,8 +3750,8 @@
           shape: "circle",
           spin: 10,
           trailRate: 0.05,
-          homing: 1.4 + level * 0.28,
-          turnRate: 5.5 + level * 1.2,
+          homing: 1.4 + level * 0.28 + bonus.turnBonus * 0.2,
+          turnRate: 5.5 + level * 1.2 + bonus.turnBonus,
           weaponKind: "wand"
         });
       }
@@ -3441,7 +3770,7 @@
         angle: angle,
         radius: 18 + level * 2
       });
-      this.player.wandCooldown = Math.max(0.38, 1.18 - level * 0.1) * this.player.specialCooldownFactor;
+      this.player.wandCooldown = Math.max(0.38, 1.18 - level * 0.1) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     updateWeaponFx(dt) {
@@ -3461,6 +3790,7 @@
 
     fireNeonNeedles() {
       var level = this.player.needleLevel;
+      var bonus = this.getSkillBonusState("neonNeedle");
       var target = this.getNearestEnemy();
       var angle;
       var count;
@@ -3473,7 +3803,7 @@
 
       angle = Math.atan2(target.y - this.player.y, target.x - this.player.x);
       this.player.facingAngle = angle;
-      count = 2 + Math.floor(level / 2);
+      count = 2 + Math.floor(level / 2) + bonus.countBonus;
       visual = this.getSkillVisual("neonNeedle");
       for (i = 0; i < count; i += 1) {
         var spread = count > 1 ? (i - (count - 1) / 2) * 0.14 : 0;
@@ -3487,6 +3817,7 @@
           radius: 5,
           life: 1.5,
           damage: Math.round(this.player.damage * 0.36 + 8 + level * 6),
+          skillId: "neonNeedle",
           color: visual.color,
           trailColor: visual.trailColor,
           accentColor: visual.accentColor,
@@ -3495,8 +3826,8 @@
           shape: "ticket",
           spin: 12,
           trailRate: 0.04,
-          homing: 0.9 + level * 0.2,
-          turnRate: 4.8 + level * 0.8
+          homing: 0.9 + level * 0.2 + bonus.turnBonus * 0.2,
+          turnRate: 4.8 + level * 0.8 + bonus.turnBonus
         });
       }
       this.spawnSkillSignature("neonNeedle", this.player.x, this.player.y, {
@@ -3504,11 +3835,12 @@
         angle: angle,
         radius: 14 + level * 2
       });
-      this.player.needleCooldown = Math.max(0.28, 1.02 - level * 0.08) * this.player.specialCooldownFactor;
+      this.player.needleCooldown = Math.max(0.28, 1.02 - level * 0.08) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireMeteorCall() {
       var level = this.player.meteorLevel;
+      var bonus = this.getSkillBonusState("meteorCall");
       var target = this.getNearestEnemy();
       var impactX;
       var impactY;
@@ -3523,8 +3855,8 @@
 
       impactX = target.x;
       impactY = target.y;
-      radius = 42 + level * 8;
-      damage = Math.round(this.player.damage * 0.82 + 18 + level * 11);
+      radius = (42 + level * 8) * bonus.areaMul;
+      damage = Math.round((this.player.damage * 0.82 + 18 + level * 11) * bonus.damageMul);
       visual = this.getSkillVisual("meteorCall");
 
       this.pushWeaponFx({
@@ -3563,11 +3895,12 @@
         }
       }
 
-      this.player.meteorCooldown = Math.max(1.2, 4.3 - level * 0.32) * this.player.specialCooldownFactor;
+      this.player.meteorCooldown = Math.max(1.2, 4.3 - level * 0.32) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireThunderChain() {
       var level = this.player.thunderLevel;
+      var bonus = this.getSkillBonusState("thunderChain");
       var currentTarget = this.getNearestEnemy();
       var visual;
       var chainRange;
@@ -3586,9 +3919,9 @@
       }
 
       visual = this.getSkillVisual("thunderChain");
-      chainRange = 158 + level * 20;
-      jumps = 2 + Math.floor(level / 2);
-      damage = Math.round(this.player.damage * 0.5 + 14 + level * 9);
+      chainRange = (158 + level * 20) * bonus.areaMul;
+      jumps = 2 + Math.floor(level / 2) + bonus.countBonus;
+      damage = Math.round((this.player.damage * 0.5 + 14 + level * 9) * bonus.damageMul);
       fromX = this.player.x;
       fromY = this.player.y;
       hitEnemies = [];
@@ -3637,11 +3970,12 @@
         power: 1.1 + level * 0.18,
         radius: 16 + level * 2
       });
-      this.player.thunderCooldown = Math.max(0.8, 3.2 - level * 0.24) * this.player.specialCooldownFactor;
+      this.player.thunderCooldown = Math.max(0.8, 3.2 - level * 0.24) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireBlizzardFan() {
       var level = this.player.blizzardLevel;
+      var bonus = this.getSkillBonusState("blizzardFan");
       var target = this.getNearestEnemy();
       var angle;
       var count;
@@ -3656,7 +3990,7 @@
         ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
         : this.player.facingAngle;
       this.player.facingAngle = angle;
-      count = 4 + level * 2;
+      count = 4 + level * 2 + bonus.countBonus;
       visual = this.getSkillVisual("blizzardFan");
 
       for (i = 0; i < count; i += 1) {
@@ -3671,6 +4005,7 @@
           radius: 5,
           life: 1.35,
           damage: Math.round(this.player.damage * 0.34 + 8 + level * 5),
+          skillId: "blizzardFan",
           color: visual.color,
           trailColor: visual.trailColor,
           accentColor: visual.accentColor,
@@ -3686,11 +4021,12 @@
         angle: angle,
         radius: 20 + level * 3
       });
-      this.player.blizzardCooldown = Math.max(0.46, 1.56 - level * 0.1) * this.player.specialCooldownFactor;
+      this.player.blizzardCooldown = Math.max(0.46, 1.56 - level * 0.1) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireCrossLance() {
       var level = this.player.crossLevel;
+      var bonus = this.getSkillBonusState("crossLance");
       var visual;
       var directions;
       var i;
@@ -3709,6 +4045,9 @@
       if (level >= 4) {
         directions.push(Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75);
       }
+      if (bonus.countBonus > 0) {
+        directions.push(Math.PI * 0.125, Math.PI * 0.625, Math.PI * 1.125, Math.PI * 1.625);
+      }
 
       for (i = 0; i < directions.length; i += 1) {
         this.createPlayerShot({
@@ -3719,6 +4058,7 @@
           radius: 6,
           life: 1.18,
           damage: Math.round(this.player.damage * 0.42 + 10 + level * 6),
+          skillId: "crossLance",
           pierce: 1 + Math.floor(level / 3),
           color: visual.color,
           trailColor: visual.trailColor,
@@ -3734,11 +4074,12 @@
         power: 1 + level * 0.2,
         radius: 24 + level * 4
       });
-      this.player.crossCooldown = Math.max(0.88, 2.65 - level * 0.16) * this.player.specialCooldownFactor;
+      this.player.crossCooldown = Math.max(0.88, 2.65 - level * 0.16) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireBoomerangDisc() {
       var level = this.player.boomerangLevel;
+      var bonus = this.getSkillBonusState("boomerangDisc");
       var target = this.getNearestEnemy();
       var angle;
       var count;
@@ -3753,7 +4094,7 @@
         ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
         : this.player.facingAngle;
       this.player.facingAngle = angle;
-      count = 1 + Math.floor(level / 2);
+      count = 1 + Math.floor(level / 2) + bonus.countBonus;
       visual = this.getSkillVisual("boomerangDisc");
 
       for (i = 0; i < count; i += 1) {
@@ -3768,6 +4109,7 @@
           radius: 9,
           life: 1.7,
           damage: Math.round(this.player.damage * 0.46 + 12 + level * 7),
+          skillId: "boomerangDisc",
           pierce: 2 + Math.floor(level / 2),
           color: visual.color,
           trailColor: visual.trailColor,
@@ -3785,11 +4127,12 @@
         angle: angle,
         radius: 18 + level * 3
       });
-      this.player.boomerangCooldown = Math.max(0.84, 2.2 - level * 0.14) * this.player.specialCooldownFactor;
+      this.player.boomerangCooldown = Math.max(0.84, 2.2 - level * 0.14) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     firePetalStorm() {
       var level = this.player.petalLevel;
+      var bonus = this.getSkillBonusState("petalStorm");
       var count;
       var visual;
       var i;
@@ -3798,7 +4141,7 @@
         return;
       }
 
-      count = 8 + level * 2;
+      count = 8 + level * 2 + bonus.countBonus * 2;
       visual = this.getSkillVisual("petalStorm");
 
       for (i = 0; i < count; i += 1) {
@@ -3811,6 +4154,7 @@
           radius: 5,
           life: 1.08,
           damage: Math.round(this.player.damage * 0.32 + 7 + level * 5),
+          skillId: "petalStorm",
           pierce: 1,
           color: visual.color,
           trailColor: visual.trailColor,
@@ -3826,11 +4170,12 @@
         power: 0.9 + level * 0.16,
         radius: 26 + level * 4
       });
-      this.player.petalCooldown = Math.max(0.76, 2.42 - level * 0.16) * this.player.specialCooldownFactor;
+      this.player.petalCooldown = Math.max(0.76, 2.42 - level * 0.16) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireCometTrail() {
       var level = this.player.cometTrailLevel;
+      var bonus = this.getSkillBonusState("cometTrail");
       var target = this.getNearestEnemy();
       var visual;
       var hits;
@@ -3844,9 +4189,9 @@
       }
 
       visual = this.getSkillVisual("cometTrail");
-      hits = 2 + Math.floor(level / 2);
-      radius = 34 + level * 6;
-      damage = Math.round(this.player.damage * 0.58 + 14 + level * 8);
+      hits = 2 + Math.floor(level / 2) + bonus.countBonus;
+      radius = (34 + level * 6) * bonus.areaMul;
+      damage = Math.round((this.player.damage * 0.58 + 14 + level * 8) * bonus.damageMul);
 
       for (i = 0; i < hits; i += 1) {
         var anchorX = target ? target.x : this.player.x;
@@ -3889,11 +4234,12 @@
         }
       }
 
-      this.player.cometTrailCooldown = Math.max(1.5, 4.9 - level * 0.3) * this.player.specialCooldownFactor;
+      this.player.cometTrailCooldown = Math.max(1.5, 4.9 - level * 0.3) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireEmberFork() {
       var level = this.player.emberForkLevel;
+      var bonus = this.getSkillBonusState("emberFork");
       var target = this.getNearestEnemy();
       var angle;
       var count;
@@ -3908,7 +4254,7 @@
         ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
         : this.player.facingAngle;
       this.player.facingAngle = angle;
-      count = 3 + Math.floor(level / 2);
+      count = 3 + Math.floor(level / 2) + bonus.countBonus;
       visual = this.getSkillVisual("emberFork");
 
       for (i = 0; i < count; i += 1) {
@@ -3923,6 +4269,7 @@
           radius: 5,
           life: 1.22,
           damage: Math.round(this.player.damage * 0.36 + 8 + level * 5),
+          skillId: "emberFork",
           pierce: Math.floor(level / 3),
           color: visual.color,
           trailColor: visual.trailColor,
@@ -3939,11 +4286,12 @@
         angle: angle,
         radius: 18 + level * 3
       });
-      this.player.emberForkCooldown = Math.max(0.48, 1.44 - level * 0.09) * this.player.specialCooldownFactor;
+      this.player.emberForkCooldown = Math.max(0.48, 1.44 - level * 0.09) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     firePrismRail() {
       var level = this.player.prismRailLevel;
+      var bonus = this.getSkillBonusState("prismRail");
       var target = this.getNearestEnemy();
       var angle;
       var count;
@@ -3959,7 +4307,7 @@
         ? Math.atan2(target.y - this.player.y, target.x - this.player.x)
         : this.player.facingAngle;
       this.player.facingAngle = angle;
-      count = level >= 4 ? 3 : 2;
+      count = (level >= 4 ? 3 : 2) + bonus.countBonus;
       spacing = 14 + level * 2;
       visual = this.getSkillVisual("prismRail");
 
@@ -3977,6 +4325,7 @@
           radius: 6,
           life: 1.24,
           damage: Math.round(this.player.damage * 0.54 + 12 + level * 6),
+          skillId: "prismRail",
           pierce: 2 + Math.floor(level / 2),
           color: visual.color,
           trailColor: visual.trailColor,
@@ -3993,11 +4342,12 @@
         angle: angle,
         radius: 20 + level * 3
       });
-      this.player.prismRailCooldown = Math.max(0.78, 2.36 - level * 0.15) * this.player.specialCooldownFactor;
+      this.player.prismRailCooldown = Math.max(0.78, 2.36 - level * 0.15) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireFrostMine() {
       var level = this.player.frostMineLevel;
+      var bonus = this.getSkillBonusState("frostMine");
       var count;
       var visual;
       var i;
@@ -4006,7 +4356,7 @@
         return;
       }
 
-      count = 2 + Math.floor(level / 2);
+      count = 2 + Math.floor(level / 2) + bonus.countBonus;
       visual = this.getSkillVisual("frostMine");
       for (i = 0; i < count; i += 1) {
         var angle = this.player.facingAngle + Math.PI + (count > 1 ? (i - (count - 1) / 2) * 0.42 : 0);
@@ -4020,6 +4370,7 @@
           radius: 8,
           life: 2.6 + level * 0.12,
           damage: Math.round(this.player.damage * 0.42 + 10 + level * 6),
+          skillId: "frostMine",
           pierce: 1,
           color: visual.color,
           trailColor: visual.trailColor,
@@ -4037,11 +4388,12 @@
         angle: this.player.facingAngle + Math.PI,
         radius: 24 + level * 4
       });
-      this.player.frostMineCooldown = Math.max(1.2, 3.42 - level * 0.2) * this.player.specialCooldownFactor;
+      this.player.frostMineCooldown = Math.max(1.2, 3.42 - level * 0.2) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     fireSpiralDrive() {
       var level = this.player.spiralDriveLevel;
+      var bonus = this.getSkillBonusState("spiralDrive");
       var visual;
       var count;
       var i;
@@ -4051,7 +4403,7 @@
       }
 
       visual = this.getSkillVisual("spiralDrive");
-      count = 6 + level * 2;
+      count = 6 + level * 2 + bonus.countBonus * 2;
       for (i = 0; i < count; i += 1) {
         var angle = this.elapsedSec * 2.4 + (Math.PI * 2 * i) / count;
         this.createPlayerShot({
@@ -4062,6 +4414,7 @@
           radius: 5,
           life: 1.36,
           damage: Math.round(this.player.damage * 0.3 + 7 + level * 5),
+          skillId: "spiralDrive",
           pierce: 1,
           color: visual.color,
           trailColor: visual.trailColor,
@@ -4077,11 +4430,129 @@
         power: 0.95 + level * 0.16,
         radius: 24 + level * 4
       });
-      this.player.spiralDriveCooldown = Math.max(0.7, 1.96 - level * 0.12) * this.player.specialCooldownFactor;
+      this.player.spiralDriveCooldown = Math.max(0.7, 1.96 - level * 0.12) * this.player.specialCooldownFactor * bonus.cooldownMul;
+    }
+
+    fireSolarRequiem() {
+      var visual = this.getSkillVisual("solarRequiem");
+      var bonus = this.getSkillBonusState("solarRequiem");
+      var count = 10 + bonus.countBonus * 2;
+      var damage = Math.round((this.player.damage * 0.72 + 28) * bonus.damageMul);
+      var i;
+      for (i = 0; i < count; i += 1) {
+        var angle = this.elapsedSec * 0.8 + (Math.PI * 2 * i) / count;
+        this.createPlayerShot({ x: Math.cos(angle), y: Math.sin(angle) }, {
+          speed: this.player.bulletSpeed * 1.16,
+          radius: 7,
+          life: 1.42,
+          damage: damage,
+          skillId: "solarRequiem",
+          pierce: 3,
+          kind: "solar",
+          skinKind: "beam",
+          shape: "diamond",
+          trailRate: 0.04
+        });
+      }
+      this.effects.flashScreen(visual.flashColor || visual.color, 0.06, 0.12);
+      this.effects.triggerShake(8, 0.12);
+      this.spawnSkillSignature("solarRequiem", this.player.x, this.player.y, {
+        power: 1.5 + bonus.tier * 0.2,
+        radius: 48
+      });
+      this.player.solarRequiemCooldown = Math.max(5.2, 10.8 * bonus.cooldownMul) * this.player.specialCooldownFactor;
+    }
+
+    fireGlacierSanctuary() {
+      var visual = this.getSkillVisual("glacierSanctuary");
+      var bonus = this.getSkillBonusState("glacierSanctuary");
+      var radius = 146 * bonus.areaMul;
+      var damage = Math.round((this.player.damage * 0.44 + 20) * bonus.damageMul);
+      var i;
+      this.healPlayer(10 + bonus.healBonus);
+      this.effects.spawnRing(this.player.x, this.player.y, {
+        color: visual.color,
+        radius: 22,
+        growth: radius,
+        lineWidth: 4,
+        life: 0.28,
+        fillAlpha: 0.08
+      });
+      this.spawnSkillSignature("glacierSanctuary", this.player.x, this.player.y, {
+        power: 1.35 + bonus.tier * 0.18,
+        radius: radius * 0.42
+      });
+      for (i = this.enemies.length - 1; i >= 0; i -= 1) {
+        if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= radius + this.enemies[i].radius) {
+          this.enemies[i].hp -= damage;
+          this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
+            color: visual.color,
+            ringColor: visual.accentColor,
+            radius: 10
+          });
+          if (this.enemies[i].hp <= 0) {
+            this.killEnemy(this.enemies[i], this.enemies[i].category === "elite" || this.enemies[i].category === "boss");
+            this.enemies.splice(i, 1);
+          }
+        }
+      }
+      this.player.glacierSanctuaryCooldown = Math.max(6.4, 12.6 * bonus.cooldownMul) * this.player.specialCooldownFactor;
+    }
+
+    firePhantomMirage() {
+      var visual = this.getSkillVisual("phantomMirage");
+      var bonus = this.getSkillBonusState("phantomMirage");
+      var count = 5 + bonus.countBonus * 2;
+      var i;
+      for (i = 0; i < count; i += 1) {
+        var angle = this.elapsedSec * 1.1 + (Math.PI * 2 * i) / count;
+        this.createPlayerShot({ x: Math.cos(angle), y: Math.sin(angle) }, {
+          originX: this.player.x + Math.cos(angle) * 36,
+          originY: this.player.y + Math.sin(angle) * 36,
+          speed: this.player.bulletSpeed * 1.04,
+          radius: 6,
+          life: 1.84,
+          damage: Math.round((this.player.damage * 0.48 + 12) * bonus.damageMul),
+          skillId: "phantomMirage",
+          kind: "mirage",
+          skinKind: "pulse",
+          shape: "circle",
+          homing: 1.8 + bonus.turnBonus * 0.25,
+          turnRate: 6.8 + bonus.turnBonus,
+          trailRate: 0.05
+        });
+      }
+      this.spawnSkillSignature("phantomMirage", this.player.x, this.player.y, {
+        power: 1.25 + bonus.tier * 0.16,
+        radius: 34
+      });
+      this.player.phantomMirageCooldown = Math.max(4.8, 9.4 * bonus.cooldownMul) * this.player.specialCooldownFactor;
+    }
+
+    updateTrueEvolutionSkills(dt) {
+      if (this.getUpgradeLevel("solarRequiem") > 0) {
+        this.player.solarRequiemCooldown -= dt;
+        if (this.player.solarRequiemCooldown <= 0) {
+          this.fireSolarRequiem();
+        }
+      }
+      if (this.getUpgradeLevel("glacierSanctuary") > 0) {
+        this.player.glacierSanctuaryCooldown -= dt;
+        if (this.player.glacierSanctuaryCooldown <= 0) {
+          this.fireGlacierSanctuary();
+        }
+      }
+      if (this.getUpgradeLevel("phantomMirage") > 0) {
+        this.player.phantomMirageCooldown -= dt;
+        if (this.player.phantomMirageCooldown <= 0) {
+          this.firePhantomMirage();
+        }
+      }
     }
 
     updateHaloSigils(dt) {
       var level = this.player.haloLevel;
+      var bonus = this.getSkillBonusState("haloSigil");
       var count;
       var radius;
       var damage;
@@ -4094,9 +4565,9 @@
         return;
       }
 
-      count = 1 + Math.floor(level / 2);
-      radius = 84 + level * 8;
-      damage = Math.round(9 + level * 7 + this.player.damage * 0.2);
+      count = 1 + Math.floor(level / 2) + bonus.countBonus;
+      radius = (84 + level * 8) * bonus.areaMul;
+      damage = Math.round((9 + level * 7 + this.player.damage * 0.2) * bonus.damageMul);
       visual = this.getSkillVisual("haloSigil");
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
@@ -4147,6 +4618,7 @@
 
     updateDroneBuddy(dt) {
       var level = this.player.droneLevel;
+      var bonus = this.getSkillBonusState("droneBuddy");
       var droneCount;
       var orbitRadius;
       var i;
@@ -4159,8 +4631,8 @@
       }
 
       visual = this.getSkillVisual("droneBuddy");
-      droneCount = 1 + Math.floor(level / 3);
-      orbitRadius = 52 + level * 10;
+      droneCount = 1 + Math.floor(level / 3) + bonus.countBonus;
+      orbitRadius = (52 + level * 10) * bonus.areaMul;
       for (i = 0; i < droneCount; i += 1) {
         var angle = this.elapsedSec * (1.8 + level * 0.08) + (Math.PI * 2 * i) / droneCount + Math.PI * 0.25;
         this.droneRender.push({
@@ -4180,7 +4652,7 @@
         return;
       }
 
-      this.player.droneCooldown += Math.max(0.16, (0.62 - level * 0.07) * this.player.specialCooldownFactor);
+      this.player.droneCooldown += Math.max(0.16, (0.62 - level * 0.07) * this.player.specialCooldownFactor * bonus.cooldownMul);
       for (i = 0; i < this.droneRender.length; i += 1) {
         var drone = this.droneRender[i];
         var direction = normalize(target.x - drone.x, target.y - drone.y);
@@ -4191,6 +4663,7 @@
           radius: 5,
           life: 1.18,
           damage: Math.round(this.player.damage * 0.44 + level * 7),
+          skillId: "droneBuddy",
           color: visual.color,
           trailColor: visual.trailColor,
           accentColor: visual.accentColor,
@@ -4249,13 +4722,14 @@
         }
       }
       if (this.player.vitalBloomLevel > 0) {
+        var vitalBonus = this.getSkillBonusState("vitalBloom");
         this.player.vitalBloomPulse -= dt;
         if (this.player.vitalBloomPulse <= 0) {
-          var vitalRadius = 88 + this.player.vitalBloomLevel * 14;
-          var vitalDamage = Math.round(8 + this.player.vitalBloomLevel * 6 + this.player.damage * 0.16);
+          var vitalRadius = (88 + this.player.vitalBloomLevel * 14) * vitalBonus.areaMul;
+          var vitalDamage = Math.round((8 + this.player.vitalBloomLevel * 6 + this.player.damage * 0.16) * vitalBonus.damageMul);
           var vitalVisual = this.getSkillVisual("vitalBloom");
-          this.player.vitalBloomPulse = Math.max(0.54, 1.95 - this.player.vitalBloomLevel * 0.12);
-          this.healPlayer(3 + this.player.vitalBloomLevel * 2);
+          this.player.vitalBloomPulse = Math.max(0.54, (1.95 - this.player.vitalBloomLevel * 0.12) * vitalBonus.cooldownMul);
+          this.healPlayer(3 + this.player.vitalBloomLevel * 2 + vitalBonus.healBonus);
           this.effects.spawnRing(this.player.x, this.player.y, {
             color: vitalVisual.color,
             radius: 16,
@@ -4288,6 +4762,7 @@
 
     triggerSaltGuard() {
       var level = this.player.shellLevel;
+      var bonus = this.getSkillBonusState("saltGuard");
       var radius;
       var damage;
       var i;
@@ -4297,8 +4772,8 @@
         return;
       }
 
-      radius = 104 + level * 18;
-      damage = Math.round(16 + level * 12 + this.player.damage * 0.22);
+      radius = (104 + level * 18) * bonus.areaMul;
+      damage = Math.round((16 + level * 12 + this.player.damage * 0.22) * bonus.damageMul);
       visual = this.getSkillVisual("saltGuard");
 
       this.effects.spawnRing(this.player.x, this.player.y, {
@@ -4344,6 +4819,8 @@
 
     fireBasicVolley() {
       var target = this.getNearestEnemy();
+      var basicBonus = this.getSkillBonusState("powerShirt");
+      var backBonus = this.getSkillBonusState("backstepVolley");
       var direction;
       var baseAngle;
       var volleyCount;
@@ -4361,7 +4838,7 @@
       }
 
       baseAngle = Math.atan2(direction.y, direction.x);
-      volleyCount = this.player.shotCount;
+      volleyCount = this.player.shotCount + basicBonus.countBonus;
 
       for (i = 0; i < volleyCount; i += 1) {
         var crit = Math.random() < critChance;
@@ -4372,6 +4849,7 @@
         }, {
           radius: crit ? 8 : 6,
           damage: Math.round(this.player.damage * frenzyBoost * (crit ? 1.65 : 1)),
+          skillId: "powerShirt",
           skinKind: crit ? "crit" : "bullet"
         });
       }
@@ -4379,17 +4857,19 @@
       if (this.player.hypeLevel >= 3 && Math.random() < 0.22) {
         this.createPlayerShot({ x: Math.cos(baseAngle + 0.28), y: Math.sin(baseAngle + 0.28) }, {
           damage: Math.round(this.player.damage * frenzyBoost * 0.88),
+          skillId: "yarimasuNee",
           skinKind: "crit"
         });
         this.createPlayerShot({ x: Math.cos(baseAngle - 0.28), y: Math.sin(baseAngle - 0.28) }, {
           damage: Math.round(this.player.damage * frenzyBoost * 0.88),
+          skillId: "yarimasuNee",
           skinKind: "crit"
         });
       }
 
       if (this.player.backstepLevel > 0) {
         var backAngle = baseAngle + Math.PI;
-        var backCount = 1 + Math.floor(this.player.backstepLevel / 2);
+        var backCount = 1 + Math.floor(this.player.backstepLevel / 2) + backBonus.countBonus;
         for (i = 0; i < backCount; i += 1) {
           spread = backCount > 1 ? (i - (backCount - 1) / 2) * 0.2 : 0;
           this.createPlayerShot({
@@ -4400,6 +4880,7 @@
             radius: 5,
             life: 1.05,
             damage: Math.round(this.player.damage * frenzyBoost * (0.45 + this.player.backstepLevel * 0.08)),
+            skillId: "backstepVolley",
             pierce: Math.max(0, this.player.pierce - 1),
             kind: "backshot",
             skinKind: "backshot"
@@ -4437,14 +4918,16 @@
     }
 
     firePulseBurst() {
-      var count = 6 + this.player.pulseLevel * 2;
-      var damage = Math.round((this.player.damage * (this.player.frenzyTimer > 0 ? 1.35 : 1)) * 0.55 + this.player.pulseLevel * 6);
+      var pulseBonus = this.getSkillBonusState("summerPulse");
+      var count = 6 + this.player.pulseLevel * 2 + pulseBonus.countBonus * 2;
+      var damage = Math.round(((this.player.damage * (this.player.frenzyTimer > 0 ? 1.35 : 1)) * 0.55 + this.player.pulseLevel * 6) * pulseBonus.damageMul);
       var i;
       for (i = 0; i < count; i += 1) {
         var angle = (Math.PI * 2 * i) / count;
         this.createPlayerShot({ x: Math.cos(angle), y: Math.sin(angle) }, {
           speed: 420 + this.player.pulseLevel * 28,
           damage: damage,
+          skillId: "summerPulse",
           radius: 7,
           life: 1.1,
           pierce: 1,
@@ -4475,6 +4958,7 @@
       var endX;
       var endY;
       var i;
+      var bonus = this.getSkillBonusState("sunbeam810");
       var beamVisual = this.getSkinShotVisual("beam", "#ffe07a");
 
       if (!target) {
@@ -4482,9 +4966,9 @@
       }
 
       direction = normalize(target.x - this.player.x, target.y - this.player.y);
-      length = 420 + this.player.beamLevel * 80;
-      width = 18 + this.player.beamLevel * 4;
-      damage = Math.round(this.player.damage * (this.player.frenzyTimer > 0 ? 1.28 : 1) * 0.7 + 18 + this.player.beamLevel * 12);
+      length = (420 + this.player.beamLevel * 80) * (0.96 + bonus.areaMul * 0.22);
+      width = (18 + this.player.beamLevel * 4) * (0.95 + bonus.areaMul * 0.18);
+      damage = Math.round((this.player.damage * (this.player.frenzyTimer > 0 ? 1.28 : 1) * 0.7 + 18 + this.player.beamLevel * 12) * bonus.damageMul);
       endX = this.player.x + direction.x * length;
       endY = this.player.y + direction.y * length;
 
@@ -4522,11 +5006,11 @@
         angle: Math.atan2(direction.y, direction.x),
         radius: width + 14
       });
-      this.player.beamCooldown = Math.max(1.2, 4.4 - this.player.beamLevel * 0.46) * this.player.specialCooldownFactor;
+      this.player.beamCooldown = Math.max(1.2, 4.4 - this.player.beamLevel * 0.46) * this.player.specialCooldownFactor * bonus.cooldownMul;
     }
 
     awardXp(amount, x, y) {
-      var gained = Math.max(1, Math.round(amount * this.player.xpGainMultiplier * (this.isBotMode ? 1.95 : this.isInfinityMode ? 1.12 : 1)));
+      var gained = Math.max(1, Math.round(amount * this.player.xpGainMultiplier * (this.isBotMode ? 1.7 : this.isInfinityMode ? 1.02 : 1)));
       this.player.xp += gained;
       this.effects.spawnFloatingText("+" + gained + " " + translate(this.game, "common.xp"), x, y, {
         color: "#88f291",
@@ -4537,7 +5021,7 @@
       while (this.player.xp >= this.player.xpForNext) {
         this.player.xp -= this.player.xpForNext;
         this.player.level += 1;
-        this.player.xpForNext = Math.round(this.player.xpForNext * (this.isBotMode ? 1.18 : 1.28) + (this.isBotMode ? 4 : 7));
+        this.player.xpForNext = Math.round(this.player.xpForNext * (this.isBotMode ? 1.22 : this.isInfinityMode ? 1.31 : 1.33) + (this.isBotMode ? 5 : this.isInfinityMode ? 8 : 9));
         this.pendingLevelUps += 1;
         this.effects.spawnLevelUp(this.player.x, this.player.y - 18, translate(this.game, "common.levelUp"));
         this.pushMessage(translate(this.game, "survivor.levelLabel", { level: this.player.level }), 1.1, "#9ee4ff");
@@ -4838,22 +5322,34 @@
       }
     }
 
-    buildLevelUpChoices() {
+    buildLevelUpChoices(avoidIds) {
       var ids = Object.keys(UPGRADE_CATALOG);
       var available = [];
       var result = [];
+      var avoid = avoidIds || [];
       var i;
 
       for (i = 0; i < ids.length; i += 1) {
         var upgradeId = ids[i];
         var level = this.getUpgradeLevel(upgradeId);
         var def = UPGRADE_CATALOG[upgradeId];
+        var weight;
         if (level >= def.maxLevel) {
           continue;
         }
+        if (def.hidden && !this.isTrueEvolutionReady(upgradeId)) {
+          continue;
+        }
+        weight = def.weight * (level === 0 ? 1.12 : 1.32) * this.getBotUpgradeBonus(upgradeId);
+        if (def.trueEvolution) {
+          weight *= 2.35;
+        }
+        if (avoid.indexOf(upgradeId) >= 0) {
+          weight *= 0.12;
+        }
         available.push({
           id: upgradeId,
-          weight: def.weight * (level === 0 ? 1.12 : 1.32) * this.getBotUpgradeBonus(upgradeId)
+          weight: weight
         });
       }
 
@@ -4904,6 +5400,9 @@
         this.levelUpSelected = this.pickBotLevelUpChoice();
         this.botState.levelUpTimer = 0.36;
       }
+      if (this.levelUpChoices.some(function (upgradeId) { return TRUE_EVOLUTION_IDS.indexOf(upgradeId) >= 0; })) {
+        this.pushMessage(translate(this.game, "survivor.trueEvolutionReady"), 1.2, "#ffd76f");
+      }
       this.pointerCapturedByUi = true;
     }
 
@@ -4927,17 +5426,46 @@
       return bestIndex;
     }
 
+    rerollLevelUpChoices() {
+      var nextChoices;
+      if (this.isBotMode || !this.levelUpChoices || !this.levelUpChoices.length || this.levelUpRerolls <= 0) {
+        return;
+      }
+      nextChoices = this.buildLevelUpChoices(this.levelUpChoices.slice());
+      if (!nextChoices.length) {
+        return;
+      }
+      this.levelUpChoices = nextChoices;
+      this.levelUpSelected = 0;
+      this.levelUpHover = -1;
+      this.levelUpRerolls = Math.max(0, this.levelUpRerolls - 1);
+      this.pushMessage(translate(this.game, "survivor.rerollsLeft", { count: this.levelUpRerolls }), 1.0, "#d6d0ff");
+    }
+
     applyUpgrade(upgradeId) {
       var def = UPGRADE_CATALOG[upgradeId];
+      var beforeResonance;
+      var afterResonance;
+      var self = this;
       if (!def) {
         return;
       }
+      beforeResonance = this.getActiveResonanceSnapshot().active;
       this.upgradeLevels[upgradeId] = this.getUpgradeLevel(upgradeId) + 1;
       if (this.acquiredUpgrades.indexOf(upgradeId) < 0) {
         this.acquiredUpgrades.push(upgradeId);
       }
       this.refreshBuildStats(true);
       this.pushMessage(getUpgradeName(this.game, upgradeId), 1.2, def.color);
+      if (def.trueEvolution) {
+        this.pushMessage(translate(this.game, "survivor.trueEvolutionAwakened", { skill: getUpgradeName(this.game, upgradeId) }), 1.4, def.color);
+      }
+      afterResonance = this.tagResonance;
+      Object.keys(afterResonance).forEach(function (tag) {
+        if (afterResonance[tag] && !beforeResonance[tag]) {
+          self.pushMessage(translate(self.game, "survivor.resonanceUnlocked", { tag: self.getTagLabel(tag) }), 1.25, TAG_COLORS[tag] || "#f6c453");
+        }
+      });
     }
 
     confirmLevelUpChoice(index) {
@@ -4972,8 +5500,26 @@
       };
     }
 
+    getLevelUpRerollRect() {
+      if (ns.constants.IS_MOBILE_PORTRAIT) {
+        return {
+          x: 336,
+          y: 70,
+          width: 170,
+          height: 52
+        };
+      }
+      return {
+        x: 666,
+        y: 106,
+        width: 194,
+        height: 54
+      };
+    }
+
     handleLevelUpInput(input, dt) {
       var pointer = input.getPointer();
+      var rerollRect;
       var i;
 
       if (!this.levelUpChoices || !this.levelUpChoices.length) {
@@ -4990,7 +5536,17 @@
         return;
       }
 
+      rerollRect = this.getLevelUpRerollRect();
+      this.levelUpRerollHover = false;
       if (pointer.inside) {
+        if (pointInRect(pointer, rerollRect)) {
+          this.levelUpRerollHover = true;
+          this.pointerCapturedByUi = true;
+          if (pointer.pressed) {
+            this.rerollLevelUpChoices();
+          }
+          return;
+        }
         for (i = 0; i < this.levelUpChoices.length; i += 1) {
           var rect = this.getLevelUpCardRect(i);
           if (pointInRect(pointer, rect)) {
@@ -5013,6 +5569,9 @@
       }
       if (input.wasPressed("confirm")) {
         this.confirmLevelUpChoice(this.levelUpSelected);
+      }
+      if (input.wasPressed("reroll")) {
+        this.rerollLevelUpChoices();
       }
     }
 
@@ -5258,9 +5817,11 @@
         }
       }
 
+      this.updateSkillStateTimers(dt);
       this.updateHaloSigils(dt);
       this.updateDroneBuddy(dt);
       this.updateTimedBuffs(dt);
+      this.updateTrueEvolutionSkills(dt);
       this.updateWeaponFx(dt);
 
       if (this.playerHitTimer > 0) {
@@ -5276,15 +5837,16 @@
       var orbitVisual;
       var i;
       var j;
+      var bonus = this.getSkillBonusState("ramuneOrbit");
 
       this.orbitRender = [];
       if (orbitLevel <= 0) {
         return;
       }
 
-      orbCount = 1 + orbitLevel;
-      radius = 54 + orbitLevel * 7;
-      damage = Math.round(10 + orbitLevel * 8 + this.player.damage * 0.18);
+      orbCount = 1 + orbitLevel + bonus.countBonus;
+      radius = (54 + orbitLevel * 7) * (0.94 + bonus.areaMul * 0.18);
+      damage = Math.round((10 + orbitLevel * 8 + this.player.damage * 0.18) * bonus.damageMul);
       orbitVisual = this.getSkillVisual("ramuneOrbit");
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
@@ -5298,7 +5860,7 @@
         this.orbitRender.push({
           x: ox,
           y: oy,
-          radius: 8 + orbitLevel * 0.8,
+          radius: (8 + orbitLevel * 0.8) * (0.92 + bonus.areaMul * 0.14),
           color: orbitVisual.color,
           accentColor: orbitVisual.accentColor
         });
@@ -5313,7 +5875,7 @@
           var orb = this.orbitRender[j];
           if (pointDistance(orb.x, orb.y, enemy.x, enemy.y) <= orb.radius + enemy.radius) {
             enemy.hp -= damage;
-            enemy.orbitDamageTimer = 0.14;
+            enemy.orbitDamageTimer = 0.14 * bonus.cooldownMul;
             this.effects.spawnHit(enemy.x, enemy.y, {
               color: orbitVisual.color,
               ringColor: orbitVisual.accentColor,
@@ -5552,8 +6114,8 @@
 
       function applyPair(a, b) {
         if (
-          (a.archetypeId === "speakerTotem" && (b.category === "rush" || b.archetypeId === "cometHeron" || b.archetypeId === "shadeRunner")) ||
-          (b.archetypeId === "speakerTotem" && (a.category === "rush" || a.archetypeId === "cometHeron" || a.archetypeId === "shadeRunner"))
+          (a.archetypeId === "speakerTotem" && (b.category === "rush" || b.archetypeId === "cometHeron" || b.archetypeId === "shadeRunner" || b.archetypeId === "neonProwler" || b.archetypeId === "relayBishop")) ||
+          (b.archetypeId === "speakerTotem" && (a.category === "rush" || a.archetypeId === "cometHeron" || a.archetypeId === "shadeRunner" || a.archetypeId === "neonProwler" || a.archetypeId === "relayBishop"))
         ) {
           a.synergyColor = a.synergyColor || "#ff91d7";
           b.synergyColor = b.synergyColor || "#ff91d7";
@@ -5592,6 +6154,26 @@
           b.synergyColor = b.synergyColor || "#8db4ff";
           a.synergySpeed = Math.max(a.synergySpeed, 1.16);
           b.synergySpeed = Math.max(b.synergySpeed, 1.16);
+        }
+
+        if (
+          (a.archetypeId === "paperMask" && (b.archetypeId === "stallLantern" || b.archetypeId === "rumorWisp")) ||
+          (b.archetypeId === "paperMask" && (a.archetypeId === "stallLantern" || a.archetypeId === "rumorWisp"))
+        ) {
+          a.synergyColor = a.synergyColor || "#f6d5bf";
+          b.synergyColor = b.synergyColor || "#f6d5bf";
+          a.synergyDamage = Math.max(a.synergyDamage, 1.08);
+          b.synergyDamage = Math.max(b.synergyDamage, 1.08);
+        }
+
+        if (
+          (a.archetypeId === "steamKettle" && (b.archetypeId === "summerWall" || b.archetypeId === "brainGolem")) ||
+          (b.archetypeId === "steamKettle" && (a.archetypeId === "summerWall" || a.archetypeId === "brainGolem"))
+        ) {
+          a.synergyColor = a.synergyColor || "#bfefff";
+          b.synergyColor = b.synergyColor || "#bfefff";
+          a.synergyDamage = Math.max(a.synergyDamage, 1.1);
+          b.synergyDamage = Math.max(b.synergyDamage, 1.1);
         }
       }
 
@@ -5716,6 +6298,23 @@
           velocityX += -toPlayer.y * sideAngle;
           velocityY += toPlayer.x * sideAngle;
           moveScale = toPlayer.length < 220 ? -0.22 : 0.66;
+        } else if (enemy.archetypeId === "neonProwler") {
+          sideAngle = Math.sin(this.elapsedSec * 10.5 + i * 1.6) * 0.62;
+          velocityX += -toPlayer.y * sideAngle;
+          velocityY += toPlayer.x * sideAngle;
+          moveScale *= 1.08;
+        } else if (enemy.archetypeId === "paperMask") {
+          sideAngle = Math.sin(this.elapsedSec * 6.6 + i * 0.8) * 0.54;
+          velocityX += Math.cos(Math.atan2(toPlayer.y, toPlayer.x) + Math.PI * 0.5) * sideAngle * 0.62;
+          velocityY += Math.sin(Math.atan2(toPlayer.y, toPlayer.x) + Math.PI * 0.5) * sideAngle * 0.62;
+          moveScale = toPlayer.length < 210 ? -0.24 : 0.56;
+        } else if (enemy.archetypeId === "steamKettle") {
+          moveScale = toPlayer.length < 250 ? -0.42 : 0.4;
+        } else if (enemy.archetypeId === "relayBishop") {
+          sideAngle = Math.sin(this.elapsedSec * 4.6 + i * 0.52) * 0.34;
+          velocityX += -toPlayer.y * sideAngle;
+          velocityY += toPlayer.x * sideAngle;
+          moveScale = toPlayer.length < 230 ? -0.18 : 0.64;
         }
 
         if (enemy.archetypeId === "clockNeedleHound") {
@@ -5747,6 +6346,16 @@
           if (enemy.dashBoost > 0) {
             enemy.dashBoost -= dt;
             moveScale *= 2.3;
+          }
+        } else if (enemy.archetypeId === "neonProwler") {
+          enemy.dashTimer = (enemy.dashTimer || 0.48) - dt;
+          if (enemy.dashTimer <= 0) {
+            enemy.dashTimer = 1.08;
+            enemy.dashBoost = 0.18;
+          }
+          if (enemy.dashBoost > 0) {
+            enemy.dashBoost -= dt;
+            moveScale *= 3.05;
           }
         }
 
@@ -6023,6 +6632,116 @@
               spin: 9
             });
           }
+        } else if (enemy.archetypeId === "paperMask" && enemy.attackTimer <= 0) {
+          angle = Math.atan2(toPlayer.y, toPlayer.x);
+          enemy.attackTimer = 1.54;
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#f6d5bf",
+            radius: 12,
+            growth: 32,
+            lineWidth: 2,
+            life: 0.16,
+            fillAlpha: 0.05
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle), y: Math.sin(angle) }, {
+            speed: 194 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 7,
+            damage: enemy.damage,
+            color: "#f6d5bf",
+            kind: "toast",
+            trailRate: 0.07,
+            spin: 5
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle + 0.34), y: Math.sin(angle + 0.34) }, {
+            speed: 178 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#d27f6f",
+            kind: "toast",
+            trailRate: 0.08,
+            spin: 4
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle - 0.34), y: Math.sin(angle - 0.34) }, {
+            speed: 178 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#d27f6f",
+            kind: "toast",
+            trailRate: 0.08,
+            spin: 4
+          });
+        } else if (enemy.archetypeId === "steamKettle" && enemy.attackTimer <= 0) {
+          angle = Math.atan2(toPlayer.y, toPlayer.x);
+          enemy.attackTimer = 1.82;
+          this.effects.spawnRadialStreakBurst(enemy.x, enemy.y, {
+            count: 7,
+            speedMin: 22,
+            speedMax: 66,
+            life: 0.2,
+            color: "#d7e1ef",
+            width: 2,
+            length: 15,
+            drag: 0.88
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle), y: Math.sin(angle) }, {
+            speed: 176 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 9,
+            damage: enemy.damage + 2,
+            color: "#d7e1ef",
+            kind: "anvil",
+            trailRate: 0.08,
+            spin: 8
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle + 0.24), y: Math.sin(angle + 0.24) }, {
+            speed: 158 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#bfefff",
+            kind: "speaker",
+            trailRate: 0.08,
+            spin: 6
+          });
+          this.createEnemyShot(enemy, { x: Math.cos(angle - 0.24), y: Math.sin(angle - 0.24) }, {
+            speed: 158 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 6,
+            damage: enemy.damage - 1,
+            color: "#bfefff",
+            kind: "speaker",
+            trailRate: 0.08,
+            spin: 6
+          });
+        } else if (enemy.archetypeId === "relayBishop" && enemy.attackTimer <= 0) {
+          enemy.attackTimer = 1.1;
+          this.effects.flashScreen("#8fe7ff", 0.03, 0.05);
+          this.effects.spawnRing(enemy.x, enemy.y, {
+            color: "#8fe7ff",
+            radius: 18,
+            growth: 72,
+            lineWidth: 3,
+            life: 0.2,
+            fillAlpha: 0.06
+          });
+          for (var bishopShot = 0; bishopShot < 8; bishopShot += 1) {
+            var bishopAngle = (Math.PI * 2 * bishopShot) / 8 + this.elapsedSec * 0.2;
+            this.createEnemyShot(enemy, { x: Math.cos(bishopAngle), y: Math.sin(bishopAngle) }, {
+              speed: 228 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+              radius: 7,
+              damage: enemy.damage - 2,
+              color: "#8fe7ff",
+              kind: "relic",
+              trailRate: 0.05,
+              spin: 8
+            });
+          }
+          this.createEnemyShot(enemy, toPlayer, {
+            speed: 262 * (this.plan.enemyScale.projectileSpeedMultiplier || 1),
+            radius: 8,
+            damage: enemy.damage + 3,
+            color: "#fff1c4",
+            kind: "idol-core",
+            trailRate: 0.05,
+            spin: 4
+          });
         } else if (enemy.category === "ranged" && enemy.attackTimer <= 0) {
           enemy.attackTimer = enemy.archetypeId === "chlorineShade" ? 1.35 : 1.75;
           if (enemy.archetypeId === "chlorineShade") {
@@ -6951,6 +7670,56 @@
       }
     }
 
+    drawTagResonancePanel(renderer, x, y, width, compact) {
+      var tags = ["fire", "ice", "lightning", "slash", "deploy", "homing", "heal"];
+      var cols = compact ? 3 : 2;
+      var chipGap = compact ? 6 : 8;
+      var chipHeight = compact ? 24 : 28;
+      var chipWidth = Math.floor((width - 24 - (cols - 1) * chipGap) / cols);
+      var rows = Math.ceil(tags.length / cols);
+      var panelHeight = (compact ? 40 : 46) + rows * (chipHeight + chipGap) + 10;
+      var i;
+
+      renderer.drawPanel(x, y, width, panelHeight, {
+        fill: compact ? "rgba(10, 10, 10, 0.86)" : "rgba(12, 12, 16, 0.9)",
+        border: "#5f4423"
+      });
+      renderer.drawText(translate(this.game, "common.resonance"), x + 14, y + 12, {
+        size: compact ? 16 : 18,
+        color: "#f4e0b6"
+      });
+      renderer.drawText("3x", x + width - 14, y + 14, {
+        size: compact ? 12 : 13,
+        align: "right",
+        color: "#d8c8a4"
+      });
+
+      for (i = 0; i < tags.length; i += 1) {
+        var tagId = tags[i];
+        var col = i % cols;
+        var row = Math.floor(i / cols);
+        var chipX = x + 12 + col * (chipWidth + chipGap);
+        var chipY = y + (compact ? 32 : 36) + row * (chipHeight + chipGap);
+        var count = this.tagCounts[tagId] || 0;
+        var active = !!this.tagResonance[tagId];
+        var accent = TAG_COLORS[tagId] || "#f6c453";
+
+        renderer.drawPanel(chipX, chipY, chipWidth, chipHeight, {
+          fill: active ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+          border: active ? accent : "rgba(255,255,255,0.12)"
+        });
+        renderer.drawText(this.getTagLabel(tagId), chipX + 10, chipY + (compact ? 6 : 7), {
+          size: compact ? 11 : 12,
+          color: active ? accent : "#d8c8a4"
+        });
+        renderer.drawText("x" + count + (active ? " *" : ""), chipX + chipWidth - 8, chipY + (compact ? 6 : 7), {
+          size: compact ? 11 : 12,
+          align: "right",
+          color: active ? "#ffffff" : "#f4f0da"
+        });
+      }
+    }
+
     drawBotRelayPanel(renderer, x, y, width, compact) {
       var profile = this.botProfile;
       var nextBot = this.game.getSurvivorBotProfile ? this.game.getSurvivorBotProfile(this.botRelayIndex + 1) : null;
@@ -7154,163 +7923,132 @@
     }
 
     drawDesktopHud(renderer) {
-      var survivorState = this.game.state.survivor || {};
-      var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
-      var nextScoreSkin = this.isBotMode ? null : this.getNextScoreSkinUnlock();
-      var bestTimeSec = this.isInfinityMode ? (survivorState.bestEndlessTimeSec || 0) : (survivorState.bestTimeSec || 0);
-      var primaryStatText = this.isBotMode || this.isInfinityMode
-        ? translate(this.game, "common.level") + " " + this.player.level + "   " + translate(this.game, "common.kills") + " " + this.player.kills
-        : translate(this.game, "common.level") + " " + this.player.level;
       var panelX = 16;
       var panelY = 16;
-      var statLines;
-      var statsStartY;
-      var i;
 
-      renderer.drawPanel(panelX, panelY, 246, 332, {
+      renderer.drawPanel(panelX, panelY, 212, 104, {
         fill: "rgba(10, 10, 10, 0.9)",
         border: this.stageTheme.accent
       });
-      renderer.drawText(translate(this.game, "survivor.title"), panelX + 18, panelY + 16, {
-        size: 24,
-        color: this.stageTheme.accent
-      });
-      renderer.drawText(formatTime(this.elapsedSec), panelX + 18, panelY + 46, {
-        size: 38,
-        color: "#f4f0da"
-      });
-      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), panelX + 18, panelY + 92, {
-        size: 24,
-        color: "#ffe07a"
-      });
-      renderer.drawText(primaryStatText, panelX + 18, panelY + 118, {
-        size: 18,
-        color: "#f4f0da"
-      });
-      renderer.drawText(translate(this.game, "common.best") + " " + formatTime(bestTimeSec), panelX + 18, panelY + 140, {
-        size: 14,
-        color: "#d6d0ff"
-      });
-      renderer.drawText(translate(this.game, "common.bestScore") + " " + formatScore(survivorState.bestEndlessScore || 0), panelX + 18, panelY + 158, {
-        size: 14,
-        color: "#7fe6ff"
-      });
-      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, panelX + 18, panelY + 176, {
-        size: 16,
-        color: "#f6c453"
-      });
-
-      renderer.drawText(translate(this.game, "common.hp"), panelX + 18, panelY + 198, { size: 16, color: "#ffb0a6" });
-      renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-      renderer.ctx.fillRect(panelX + 58, panelY + 202, 166, 14);
-      renderer.ctx.fillStyle = "#ff8a70";
-      renderer.ctx.fillRect(panelX + 58, panelY + 202, 166 * hpRatio, 14);
-
-      if (this.shouldShowXpProgress()) {
-        var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
-        renderer.drawText(translate(this.game, "common.xp"), panelX + 18, panelY + 226, { size: 16, color: "#bdf5c1" });
-        renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-        renderer.ctx.fillRect(panelX + 58, panelY + 230, 166, 14);
-        renderer.ctx.fillStyle = "#88f291";
-        renderer.ctx.fillRect(panelX + 58, panelY + 230, 166 * xpRatio, 14);
-      }
-
-      statsStartY = this.shouldShowXpProgress() ? 254 : 226;
-      statLines = [
-        translate(this.game, "common.atk") + " " + this.player.damage,
-        translate(this.game, "common.spd") + " " + this.player.speed,
-        translate(this.game, "common.mag") + " " + this.player.pickupRange,
-        translate(this.game, "common.arm") + " " + this.player.armor.toFixed(1),
-        translate(this.game, "common.phase") + " " + this.game.phaseName(this.lastPhaseId || "opening"),
-        this.isInfinityMode && nextScoreSkin
-          ? translate(this.game, "store.unlockAtScore", { score: formatScore(nextScoreSkin.scoreThreshold || 0) })
-          : translate(this.game, "buttons.mode") + " " + this.getModeLabel()
-      ];
-      for (i = 0; i < statLines.length; i += 1) {
-        renderer.drawText(statLines[i], panelX + 18, panelY + statsStartY + i * 14, {
-          size: 14,
-          color: i >= 4 ? this.stageTheme.accent : "#d8c8a4"
-        });
-      }
-
-      renderer.drawPanel(panelX, 354, 246, 210, {
-        fill: "rgba(10, 10, 10, 0.9)",
-        border: "#5f4423"
-      });
-      renderer.drawText(translate(this.game, "common.build"), panelX + 18, 370, {
-        size: 18,
-        color: "#f4e0b6"
-      });
-      this.drawBuildIcons(renderer, panelX + 18, 398, 4, 44);
-
-      if (!this.isBotMode) {
-        renderer.drawPanel(278, 16, 260, 96, {
-          fill: "rgba(10, 10, 10, 0.88)",
-          border: "#5f4423"
-        });
-        renderer.drawText(this.game.stageName(this.stageId), 296, 30, {
-          size: 20,
-          color: this.stageTheme.accent
-        });
-        renderer.drawText(translate(this.game, "buttons.mode") + " " + this.getModeLabel(), 296, 58, {
-          size: 16,
-          color: "#f4f0da"
-        });
-        renderer.drawText(translate(this.game, "buttons.rank") + " " + this.hazardRank + (this.isInfinityMode ? " / " + translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }) : " / " + translate(this.game, "common.surviveGoal")), 296, 82, {
-          size: 12,
-          color: "#d8c8a4"
-        });
-        this.drawBotRelayPanel(renderer, 278, 124, 260, false);
-      }
-    }
-
-    drawMobileHud(renderer) {
-      var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
-      var showXp = this.shouldShowXpProgress();
-      var primaryStatText = this.isBotMode || this.isInfinityMode
-        ? translate(this.game, "common.level") + " " + this.player.level + "   " + translate(this.game, "common.kills") + " " + this.player.kills
-        : translate(this.game, "common.level") + " " + this.player.level;
-
-      renderer.drawPanel(16, 16, 456, this.isBotMode ? 188 : 132, {
-        fill: "rgba(10, 10, 10, 0.88)",
-        border: this.stageTheme.accent
-      });
-      renderer.drawText(translate(this.game, "survivor.title") + " " + formatTime(this.elapsedSec), 34, 28, {
+      renderer.drawText(formatTime(this.elapsedSec), panelX + 18, panelY + 18, {
         size: 34,
-        color: this.stageTheme.accent
+        color: "#f4f0da"
       });
-      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), 34, 62, {
+      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), panelX + 18, panelY + 64, {
         size: 22,
         color: "#ffe07a"
       });
-      renderer.drawText(primaryStatText, 34, 90, {
-        size: 20,
-        color: "#f4f0da"
+    }
+
+    drawMobileHud(renderer) {
+      renderer.drawPanel(16, 16, 320, 96, {
+        fill: "rgba(10, 10, 10, 0.88)",
+        border: this.stageTheme.accent
       });
-      renderer.drawText(translate(this.game, "common.coins") + " " + this.player.coins, 34, 114, {
-        size: 18,
-        color: "#f6c453"
+      renderer.drawText(formatTime(this.elapsedSec), 34, 24, {
+        size: 30,
+        color: this.stageTheme.accent
+      });
+      renderer.drawText(translate(this.game, "common.score") + " " + formatScore(this.score), 34, 60, {
+        size: 22,
+        color: "#ffe07a"
+      });
+    }
+
+    drawPauseMenuDetails(renderer, panelX, panelY, panelWidth, mobile) {
+      var hpRatio = this.player.maxHp > 0 ? this.player.hp / this.player.maxHp : 0;
+      var showXp = this.shouldShowXpProgress();
+      var xpRatio = showXp && this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
+      var nextScoreSkin = this.isBotMode ? null : this.getNextScoreSkinUnlock();
+      var statsX = panelX + 20;
+      var statsY = panelY + (mobile ? 76 : 92);
+      var statsW = mobile ? panelWidth - 40 : 214;
+      var statsH = mobile ? 154 : 176;
+      var buildY;
+      var buildW;
+      var buildH;
+      var textX;
+      var statLines;
+      var i;
+
+      renderer.drawPanel(statsX, statsY, statsW, statsH, {
+        fill: "rgba(10, 10, 10, 0.92)",
+        border: "#5f4423"
+      });
+      renderer.drawText(this.game.stageName(this.stageId), statsX + 14, statsY + 14, {
+        size: mobile ? 18 : 20,
+        color: this.stageTheme.accent
+      });
+      renderer.drawText(
+        translate(this.game, "buttons.mode") + " " + this.getModeLabel() + " / " +
+        translate(this.game, "buttons.rank") + " " + this.hazardRank,
+        statsX + 14,
+        statsY + (mobile ? 38 : 40),
+        {
+          size: mobile ? 13 : 14,
+          color: "#d8c8a4"
+        }
+      );
+
+      renderer.drawText(translate(this.game, "common.hp"), statsX + 14, statsY + (mobile ? 60 : 66), {
+        size: 14,
+        color: "#ffb0a6"
       });
       renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-      renderer.ctx.fillRect(260, 46, 188, 14);
+      renderer.ctx.fillRect(statsX + 54, statsY + (mobile ? 64 : 70), statsW - 68, 12);
       renderer.ctx.fillStyle = "#ff8a70";
-      renderer.ctx.fillRect(260, 46, 188 * hpRatio, 14);
-      renderer.drawText(translate(this.game, "common.hp"), 220, 40, { size: 16, color: "#ffb0a6" });
-      if (showXp) {
-        var xpRatio = this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
-        renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
-        renderer.ctx.fillRect(260, 88, 188, 14);
-        renderer.ctx.fillStyle = "#88f291";
-        renderer.ctx.fillRect(260, 88, 188 * xpRatio, 14);
-        renderer.drawText(translate(this.game, "common.xp"), 220, 82, { size: 16, color: "#bdf5c1" });
-      } else {
-        renderer.drawText(translate(this.game, "survivor.dangerTier", { tier: this.getDangerTier() }), 220, 82, {
-          size: 16,
-          color: "#ffcf8f"
+      renderer.ctx.fillRect(statsX + 54, statsY + (mobile ? 64 : 70), (statsW - 68) * hpRatio, 12);
+
+      renderer.drawText(translate(this.game, "common.xp"), statsX + 14, statsY + (mobile ? 84 : 90), {
+        size: 14,
+        color: showXp ? "#bdf5c1" : "#8e8877"
+      });
+      renderer.ctx.fillStyle = "rgba(255,255,255,0.08)";
+      renderer.ctx.fillRect(statsX + 54, statsY + (mobile ? 88 : 94), statsW - 68, 12);
+      renderer.ctx.fillStyle = showXp ? "#88f291" : "rgba(255,255,255,0.12)";
+      renderer.ctx.fillRect(statsX + 54, statsY + (mobile ? 88 : 94), (statsW - 68) * xpRatio, 12);
+
+      textX = statsX + 14;
+      statLines = [
+        translate(this.game, "common.level") + " " + this.player.level + " / " + translate(this.game, "common.kills") + " " + this.player.kills,
+        translate(this.game, "common.atk") + " " + this.player.damage + " / " + translate(this.game, "common.spd") + " " + this.player.speed,
+        translate(this.game, "common.mag") + " " + this.player.pickupRange + " / " + translate(this.game, "common.arm") + " " + this.player.armor.toFixed(1),
+        translate(this.game, "common.coins") + " " + this.player.coins,
+        this.isInfinityMode && nextScoreSkin
+          ? translate(this.game, "store.unlockAtScore", { score: formatScore(nextScoreSkin.scoreThreshold || 0) })
+          : translate(this.game, "common.phase") + " " + this.game.phaseName(this.lastPhaseId || "opening")
+      ];
+      for (i = 0; i < statLines.length; i += 1) {
+        renderer.drawText(statLines[i], textX, statsY + (mobile ? 112 : 122) + i * (mobile ? 16 : 14), {
+          size: mobile ? 12 : 13,
+          color: i === statLines.length - 1 ? this.stageTheme.accent : "#f4f0da"
         });
       }
+
+      if (mobile) {
+        this.drawTagResonancePanel(renderer, statsX, statsY + 170, panelWidth - 40, true);
+        buildY = statsY + 320;
+        buildW = panelWidth - 40;
+        buildH = 198;
+      } else {
+        this.drawTagResonancePanel(renderer, statsX + statsW + 18, statsY, panelWidth - statsW - 58, false);
+        buildY = statsY + 196;
+        buildW = panelWidth - 40;
+        buildH = 176;
+      }
+
+      renderer.drawPanel(statsX, buildY, buildW, buildH, {
+        fill: "rgba(10, 10, 10, 0.92)",
+        border: "#5f4423"
+      });
+      renderer.drawText(translate(this.game, "common.build"), statsX + 14, buildY + 14, {
+        size: mobile ? 18 : 20,
+        color: "#f4e0b6"
+      });
+      this.drawBuildIcons(renderer, statsX + 14, buildY + 40, mobile ? 4 : 6, mobile ? 42 : 44);
+
       if (this.isBotMode) {
-        this.drawBotRelayPanel(renderer, 16, 152, 456, true);
+        this.drawBotRelayPanel(renderer, statsX, buildY + buildH + 12, buildW, true);
       }
     }
 
@@ -7343,42 +8081,44 @@
 
     drawPauseOverlay(renderer) {
       if (ns.constants.IS_MOBILE_PORTRAIT) {
-        renderer.drawPanel(34, 328, 472, 174, {
+        renderer.drawPanel(18, 94, 504, this.isBotMode ? 752 : 650, {
           fill: "rgba(5, 5, 5, 0.94)",
           border: "#7fe6ff"
         });
-        renderer.drawCenteredText(translate(this.game, "survivor.paused"), 360, {
+        renderer.drawCenteredText(translate(this.game, "survivor.paused"), 126, {
           size: 32,
           color: "#7fe6ff",
           shadow: true
         });
-        renderer.drawCenteredText(translate(this.game, "survivor.pauseResume"), 414, {
-          size: 18,
+        renderer.drawCenteredText(translate(this.game, "survivor.pauseResume"), 160, {
+          size: 16,
           color: "#f4f0da"
         });
-        renderer.drawCenteredText(translate(this.game, "survivor.pauseRestart"), 446, {
-          size: 18,
+        renderer.drawCenteredText(translate(this.game, "survivor.pauseRestart"), 186, {
+          size: 16,
           color: "#d9d1ff"
         });
+        this.drawPauseMenuDetails(renderer, 18, 94, 504, true);
         return;
       }
-      renderer.drawPanel(220, 238, 520, 188, {
+      renderer.drawPanel(138, 92, 684, this.isBotMode ? 560 : 468, {
         fill: "rgba(5, 5, 5, 0.94)",
         border: "#7fe6ff"
       });
-      renderer.drawCenteredText(translate(this.game, "survivor.paused"), 270, {
+      renderer.drawCenteredText(translate(this.game, "survivor.paused"), 126, {
         size: 42,
         color: "#7fe6ff",
         shadow: true
       });
-      renderer.drawCenteredText(translate(this.game, "survivor.pauseResume"), 336, {
-        size: 24,
+      renderer.drawCenteredText(translate(this.game, "survivor.pauseResume"), 172, {
+        size: 22,
         color: "#f4f0da"
       });
-      renderer.drawCenteredText(translate(this.game, "survivor.pauseRestart"), 372, {
-        size: 24,
+      renderer.drawCenteredText(translate(this.game, "survivor.pauseRestart"), 206, {
+        size: 22,
         color: "#d9d1ff"
       });
+      this.drawPauseMenuDetails(renderer, 138, 92, 684, false);
     }
 
     drawSkinVictoryDecor(renderer, panelX, panelY, panelWidth, panelHeight) {
@@ -7537,6 +8277,7 @@
         var mCardX = 32;
         var mCardY = 170;
         var mCardWidth = 476;
+        var rerollRectMobile = this.getLevelUpRerollRect();
         var i;
 
         ctx.save();
@@ -7552,6 +8293,19 @@
           size: 32,
           color: "#ffffff",
           shadow: true
+        });
+        renderer.drawPanel(rerollRectMobile.x, rerollRectMobile.y, rerollRectMobile.width, rerollRectMobile.height, {
+          fill: this.levelUpRerolls > 0 ? (this.levelUpRerollHover ? "rgba(214,208,255,0.22)" : "rgba(20,20,28,0.92)") : "rgba(20,20,28,0.54)",
+          border: this.levelUpRerolls > 0 ? "#d6d0ff" : "rgba(255,255,255,0.16)"
+        });
+        renderer.drawText(translate(this.game, "buttons.reroll"), rerollRectMobile.x + 18, rerollRectMobile.y + 14, {
+          size: 18,
+          color: this.levelUpRerolls > 0 ? "#ffffff" : "#9a9380"
+        });
+        renderer.drawText(translate(this.game, "common.rerolls") + " " + this.levelUpRerolls, rerollRectMobile.x + rerollRectMobile.width - 16, rerollRectMobile.y + 16, {
+          size: 14,
+          align: "right",
+          color: this.levelUpRerolls > 0 ? "#d8c8a4" : "#8e8877"
         });
         renderer.drawCenteredText(translate(this.game, "common.chooseBuildPiece"), 106, {
           size: 16,
@@ -7586,14 +8340,19 @@
             size: 24,
             color: mobileDef.color
           });
+          renderer.drawParagraph(this.getUpgradeMetaLine(mobileUpgradeId), mCardX + 108, mobileCardY + 44, 326, {
+            size: 12,
+            lineHeight: 16,
+            color: "#d8c8a4"
+          });
           renderer.drawText(mobileCurrentLevel === 0 ? translate(this.game, "common.new") : translate(this.game, "common.level") + " " + (mobileCurrentLevel + 1), mCardX + mCardWidth - 18, mobileCardY + 22, {
             size: 15,
             align: "right",
             color: mobileCurrentLevel === 0 ? "#fff1c4" : "#f4f0da"
           });
-          renderer.drawParagraph(getUpgradeDescription(this.game, mobileUpgradeId, mobileCurrentLevel + 1), mCardX + 108, mobileCardY + 56, 336, {
-            size: 16,
-            lineHeight: 22,
+          renderer.drawParagraph(getUpgradeDescription(this.game, mobileUpgradeId, mobileCurrentLevel + 1), mCardX + 108, mobileCardY + 68, 336, {
+            size: 15,
+            lineHeight: 20,
             color: "#f4f0da"
           });
         }
@@ -7608,6 +8367,7 @@
       var leftWidth = 246;
       var cardX = ns.constants.GAME_WIDTH - LEVELUP_CARD_WIDTH - 74;
       var cardY = 164;
+      var rerollRect = this.getLevelUpRerollRect();
       var i;
 
       ctx.save();
@@ -7635,6 +8395,19 @@
         color: "#ffffff",
         shadow: true
       });
+      renderer.drawPanel(rerollRect.x, rerollRect.y, rerollRect.width, rerollRect.height, {
+        fill: this.levelUpRerolls > 0 ? (this.levelUpRerollHover ? "rgba(214,208,255,0.22)" : "rgba(20,20,28,0.92)") : "rgba(20,20,28,0.54)",
+        border: this.levelUpRerolls > 0 ? "#d6d0ff" : "rgba(255,255,255,0.16)"
+      });
+      renderer.drawText(translate(this.game, "buttons.reroll"), rerollRect.x + 18, rerollRect.y + 14, {
+        size: 22,
+        color: this.levelUpRerolls > 0 ? "#ffffff" : "#9a9380"
+      });
+      renderer.drawText(translate(this.game, "common.rerolls") + " " + this.levelUpRerolls, rerollRect.x + rerollRect.width - 16, rerollRect.y + 16, {
+        size: 16,
+        align: "right",
+        color: this.levelUpRerolls > 0 ? "#d8c8a4" : "#8e8877"
+      });
       renderer.drawCenteredText(translate(this.game, "common.chooseBuildPiece"), 168, {
         size: 22,
         color: "#f4f0da"
@@ -7656,14 +8429,19 @@
           size: 28,
           color: def.color
         });
+        renderer.drawParagraph(this.getUpgradeMetaLine(upgradeId), cardX + 104, cardRectY + 42, 286, {
+          size: 12,
+          lineHeight: 16,
+          color: "#d8c8a4"
+        });
         renderer.drawText(currentLevel === 0 ? translate(this.game, "common.new") : translate(this.game, "common.level") + " " + (currentLevel + 1), cardX + LEVELUP_CARD_WIDTH - 18, cardRectY + 22, {
           size: 18,
           align: "right",
           color: currentLevel === 0 ? "#fff1c4" : "#f4f0da"
         });
-        renderer.drawParagraph(getUpgradeDescription(this.game, upgradeId, currentLevel + 1), cardX + 104, cardRectY + 56, 286, {
-          size: 18,
-          lineHeight: 26,
+        renderer.drawParagraph(getUpgradeDescription(this.game, upgradeId, currentLevel + 1), cardX + 104, cardRectY + 62, 286, {
+          size: 16,
+          lineHeight: 22,
           color: "#f4f0da"
         });
       }

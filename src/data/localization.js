@@ -7,6 +7,7 @@
         title: "TITLE",
         retry: "RETRY",
         pause: "PAUSE",
+        reroll: "REROLL",
         go: "GO",
         language: "LANG",
         skin: "SKIN",
@@ -57,7 +58,10 @@
         price: "PRICE",
         surviveGoal: "SURVIVE 20:00",
         favorite: "FAVORITE",
-        avoid: "AVOID"
+        avoid: "AVOID",
+        mastery: "MASTERY",
+        resonance: "RESONANCE",
+        rerolls: "REROLLS"
       },
       modes: {
         normal: "NORMAL",
@@ -116,6 +120,11 @@
         dangerTier: "DANGER TIER {tier}",
         scoreUnlocked: "{skin} unlocked!",
         specialScoreUnlocked: "SPECIAL SKIN UNLOCKED: {skin}",
+        resonanceUnlocked: "{tag} resonance awakened.",
+        masteryUp: "{skill} mastery {tier}.",
+        trueEvolutionReady: "TRUE EVOLUTION READY",
+        trueEvolutionAwakened: "{skill} awakened.",
+        rerollsLeft: "Rerolls left: {count}",
         merchantTitle: "5:00 MERCHANT",
         merchantName: "Midsummer Merchant",
         stageShift: "STAGE SHIFT",
@@ -169,6 +178,10 @@
         brainGolem: "Brain Golem",
         cometHeron: "Comet Heron",
         abyssPriest: "Abyss Priest",
+        neonProwler: "Neon Prowler",
+        paperMask: "Paper Mask",
+        steamKettle: "Steam Kettle",
+        relayBishop: "Relay Bishop",
         stationLord: "Station Lord",
         arcadeLord: "Arcade Lord",
         poolLord: "Pool Lord",
@@ -209,7 +222,19 @@
         emberFork: { name: "Ember Fork", desc: "Fires a wide fork of burning shots toward the nearest target." },
         prismRail: { name: "Prism Rail", desc: "Twin piercing rails launch in parallel and rip through lines of enemies." },
         frostMine: { name: "Frost Mine", desc: "Drops drifting frost mines that linger and damage anything that touches them." },
-        spiralDrive: { name: "Spiral Drive", desc: "Unleashes a rotating spiral burst that fills the screen around you." }
+        spiralDrive: { name: "Spiral Drive", desc: "Unleashes a rotating spiral burst that fills the screen around you." },
+        solarRequiem: { name: "Solar Requiem", desc: "True evolution. Fire, slash, and lightning erupt in a radiant execution burst." },
+        glacierSanctuary: { name: "Glacier Sanctuary", desc: "True evolution. A freezing sanctuary pulse heals you and crushes nearby enemies." },
+        phantomMirage: { name: "Phantom Mirage", desc: "True evolution. Mirage seekers bloom around you and hunt the screen." }
+      },
+      tags: {
+        fire: "FIRE",
+        ice: "ICE",
+        lightning: "LIGHTNING",
+        slash: "SLASH",
+        deploy: "DEPLOY",
+        homing: "HOMING",
+        heal: "HEAL"
       },
       pickups: {
         xp: "XP Crystal",
@@ -230,6 +255,7 @@
         title: "\u30bf\u30a4\u30c8\u30eb",
         retry: "\u30ea\u30c8\u30e9\u30a4",
         pause: "\u4e00\u6642\u505c\u6b62",
+        reroll: "\u30ea\u30ed\u30fc\u30eb",
         go: "\u518d\u958b",
         language: "\u8a00\u8a9e",
         skin: "\u30b9\u30ad\u30f3",
@@ -280,7 +306,10 @@
         price: "\u4fa1\u683c",
         surviveGoal: "20:00 \u751f\u5b58",
         favorite: "\u5f97\u610f",
-        avoid: "\u82e6\u624b"
+        avoid: "\u82e6\u624b",
+        mastery: "\u719f\u7df4",
+        resonance: "\u5171\u9cf4",
+        rerolls: "\u30ea\u30ed\u30fc\u30eb"
       },
       modes: {
         normal: "\u30ce\u30fc\u30de\u30eb",
@@ -339,6 +368,11 @@
         dangerTier: "\u5371\u967a\u5ea6 {tier}",
         scoreUnlocked: "{skin} \u89e3\u653e!",
         specialScoreUnlocked: "\u7279\u5225\u30b9\u30ad\u30f3\u89e3\u653e: {skin}",
+        resonanceUnlocked: "{tag}\u5171\u9cf4\u304c\u76ee\u899a\u3081\u305f\u3002",
+        masteryUp: "{skill} \u719f\u7df4 {tier}\u3002",
+        trueEvolutionReady: "\u771f\u9032\u5316\u89e3\u653e",
+        trueEvolutionAwakened: "{skill} \u767a\u73fe\u3002",
+        rerollsLeft: "\u6b8b\u308a\u30ea\u30ed\u30fc\u30eb: {count}",
         merchantTitle: "5:00 \u5546\u4eba",
         merchantName: "\u771f\u590f\u5546\u4eba",
         stageShift: "\u30b9\u30c6\u30fc\u30b8\u5909\u5316",
@@ -392,6 +426,10 @@
         brainGolem: "\u30d6\u30ec\u30a4\u30f3\u30b4\u30fc\u30ec\u30e0",
         cometHeron: "\u30b3\u30e1\u30c3\u30c8\u30d8\u30ed\u30f3",
         abyssPriest: "\u6df5\u306e\u53f8\u796d",
+        neonProwler: "\u30cd\u30aa\u30f3\u30d7\u30ed\u30fc\u30e9\u30fc",
+        paperMask: "\u7d19\u9762",
+        steamKettle: "\u30b9\u30c1\u30fc\u30e0\u30b1\u30c8\u30eb",
+        relayBishop: "\u30ea\u30ec\u30fc\u30d3\u30b7\u30e7\u30c3\u30d7",
         stationLord: "\u99c5\u524d\u306e\u4e3b",
         arcadeLord: "\u5546\u5e97\u8857\u306e\u4e3b",
         poolLord: "\u30d7\u30fc\u30eb\u306e\u4e3b",
@@ -432,7 +470,19 @@
         emberFork: { name: "\u30a8\u30f3\u30d0\u30fc\u30d5\u30a9\u30fc\u30af", desc: "\u6700\u3082\u8fd1\u3044\u6575\u3078\u5411\u3051\u3066\u71b1\u3092\u5e2f\u3073\u305f\u6271\u72b6\u306e\u5f3e\u5e55\u3092\u653e\u3064\u3002" },
         prismRail: { name: "\u30d7\u30ea\u30ba\u30e0\u30ec\u30fc\u30eb", desc: "\u4e26\u884c\u3059\u308b\u8cab\u901a\u5149\u7dda\u304c\u6575\u306e\u5217\u3092\u305d\u306e\u307e\u307e\u5207\u308a\u88c2\u304f\u3002" },
         frostMine: { name: "\u30d5\u30ed\u30b9\u30c8\u30de\u30a4\u30f3", desc: "\u3086\u3063\u304f\u308a\u6f02\u3046\u51b7\u6c17\u5730\u96f7\u3092\u3070\u3089\u307e\u304d\u3001\u89e6\u308c\u305f\u6575\u306b\u30c0\u30e1\u30fc\u30b8\u3092\u4e0e\u3048\u308b\u3002" },
-        spiralDrive: { name: "\u30b9\u30d1\u30a4\u30e9\u30eb\u30c9\u30e9\u30a4\u30d6", desc: "\u4f53\u306e\u5468\u308a\u304b\u3089\u753b\u9762\u3092\u57cb\u3081\u308b\u87ba\u65cb\u5f3e\u5e55\u3092\u653e\u3064\u3002" }
+        spiralDrive: { name: "\u30b9\u30d1\u30a4\u30e9\u30eb\u30c9\u30e9\u30a4\u30d6", desc: "\u4f53\u306e\u5468\u308a\u304b\u3089\u753b\u9762\u3092\u57cb\u3081\u308b\u87ba\u65cb\u5f3e\u5e55\u3092\u653e\u3064\u3002" },
+        solarRequiem: { name: "\u30bd\u30fc\u30e9\u30fc\u30ec\u30af\u30a4\u30a8\u30e0", desc: "\u771f\u9032\u5316\u3002\u708e\u3001\u659c\u6483\u3001\u96f7\u304c\u91cd\u306a\u308a\u3001\u8f1d\u304f\u51e6\u5211\u5f3e\u5e55\u3092\u653e\u3064\u3002" },
+        glacierSanctuary: { name: "\u30b0\u30ec\u30a4\u30b7\u30e3\u30fc\u30b5\u30f3\u30af\u30c1\u30e5\u30a2\u30ea", desc: "\u771f\u9032\u5316\u3002\u51cd\u305f\u3044\u8056\u57df\u304c\u56de\u5fa9\u3068\u51cd\u7d50\u30d1\u30eb\u30b9\u3092\u540c\u6642\u306b\u653e\u3064\u3002" },
+        phantomMirage: { name: "\u30d5\u30a1\u30f3\u30c8\u30e0\u30df\u30e9\u30fc\u30b8\u30e5", desc: "\u771f\u9032\u5316\u3002\u5e7b\u5f71\u306e\u8ffd\u5c3e\u5f3e\u304c\u591a\u65b9\u5411\u304b\u3089\u51fa\u73fe\u3057\u3001\u753b\u9762\u3092\u8ffd\u3044\u8a70\u3081\u308b\u3002" }
+      },
+      tags: {
+        fire: "\u708e",
+        ice: "\u6c37",
+        lightning: "\u96f7",
+        slash: "\u65ac\u6483",
+        deploy: "\u8a2d\u7f6e",
+        homing: "\u8ffd\u5c3e",
+        heal: "\u56de\u5fa9"
       },
       pickups: {
         xp: "XP\u7d50\u6676",

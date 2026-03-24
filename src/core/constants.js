@@ -53,7 +53,8 @@
       right: ["ArrowRight", "KeyD"],
       confirm: ["KeyZ", "Enter"],
       cancel: ["KeyX", "ShiftLeft", "ShiftRight"],
-      menu: ["KeyC", "ControlLeft", "ControlRight"]
+      menu: ["KeyC", "ControlLeft", "ControlRight"],
+      reroll: ["KeyR"]
     },
     PLAYER_SIZE: 42,
     PLAYER_SPEED: 220,

@@ -267,6 +267,95 @@
       }
     }
 
+    playSkillCue(skillId, options) {
+      var opts = options || {};
+      var resonance = !!opts.resonance;
+      var tier = Math.max(0, Math.floor(opts.tier || 0));
+      var volume = 0.026 + tier * 0.003 + (resonance ? 0.004 : 0);
+      switch (skillId) {
+        case "summerSword":
+        case "breakerAxe":
+        case "crossLance":
+        case "boomerangDisc":
+          this.playSequence([
+            { note: "E4", delay: 0, duration: 0.05, type: "square", volume: volume },
+            { note: resonance ? "A4" : "G4", delay: 0.04, duration: 0.08, type: "square", volume: volume * 0.95 },
+            { note: "D5", delay: 0.08, duration: 0.12, type: "triangle", volume: volume * 0.85 }
+          ]);
+          break;
+        case "emberFork":
+        case "meteorCall":
+        case "cometTrail":
+          this.playSequence([
+            { note: "C4", delay: 0, duration: 0.08, type: "square", volume: volume },
+            { note: "G4", delay: 0.05, duration: 0.1, type: "square", volume: volume * 0.94 },
+            { note: resonance ? "C5" : "A4", delay: 0.11, duration: 0.18, type: "triangle", volume: volume * 0.86 }
+          ]);
+          break;
+        case "blizzardFan":
+        case "frostMine":
+          this.playSequence([
+            { note: "D4", delay: 0, duration: 0.05, type: "triangle", volume: volume },
+            { note: "A4", delay: 0.05, duration: 0.08, type: "triangle", volume: volume * 0.88 },
+            { note: "D5", delay: 0.12, duration: 0.14, type: "sine", volume: volume * 0.8 }
+          ]);
+          break;
+        case "thunderChain":
+        case "overclockLoop":
+          this.playSequence([
+            { note: "B4", delay: 0, duration: 0.04, type: "square", volume: volume },
+            { note: "E5", delay: 0.03, duration: 0.05, type: "square", volume: volume * 0.92 },
+            { note: "A5", delay: 0.08, duration: 0.08, type: "triangle", volume: volume * 0.84 },
+            { note: resonance ? "C6" : "B5", delay: 0.12, duration: 0.14, type: "sine", volume: volume * 0.78 }
+          ]);
+          break;
+        case "mysticWand":
+        case "neonNeedle":
+        case "droneBuddy":
+        case "phantomMirage":
+          this.playSequence([
+            { note: "G4", delay: 0, duration: 0.06, type: "triangle", volume: volume },
+            { note: "B4", delay: 0.05, duration: 0.08, type: "triangle", volume: volume * 0.88 },
+            { note: resonance ? "E5" : "D5", delay: 0.11, duration: 0.14, type: "sine", volume: volume * 0.8 }
+          ]);
+          break;
+        case "summerPulse":
+        case "haloSigil":
+        case "petalStorm":
+        case "spiralDrive":
+          this.playSequence([
+            { note: "F4", delay: 0, duration: 0.07, type: "triangle", volume: volume },
+            { note: "A4", delay: 0.05, duration: 0.09, type: "triangle", volume: volume * 0.9 },
+            { note: resonance ? "D5" : "C5", delay: 0.11, duration: 0.16, type: "sine", volume: volume * 0.82 }
+          ]);
+          break;
+        case "vitalBloom":
+        case "glacierSanctuary":
+          this.playSequence([
+            { note: "C5", delay: 0, duration: 0.08, type: "triangle", volume: volume },
+            { note: "E5", delay: 0.07, duration: 0.12, type: "triangle", volume: volume * 0.9 },
+            { note: "A5", delay: 0.14, duration: 0.22, type: "sine", volume: volume * 0.8 }
+          ]);
+          break;
+        case "sunbeam810":
+        case "prismRail":
+        case "solarRequiem":
+          this.playSequence([
+            { note: "A4", delay: 0, duration: 0.05, type: "square", volume: volume },
+            { note: "E5", delay: 0.04, duration: 0.08, type: "square", volume: volume * 0.92 },
+            { note: "A5", delay: 0.1, duration: 0.15, type: "triangle", volume: volume * 0.84 },
+            { note: resonance ? "C6" : "B5", delay: 0.18, duration: 0.2, type: "sine", volume: volume * 0.76 }
+          ]);
+          break;
+        default:
+          this.playSequence([
+            { note: "C5", delay: 0, duration: 0.06, type: "square", volume: volume },
+            { note: "G5", delay: 0.05, duration: 0.12, type: "triangle", volume: volume * 0.82 }
+          ]);
+          break;
+      }
+    }
+
     update(dt) {
       if (!this.unlocked || !this.currentTrack || !this.patterns[this.currentTrack]) {
         return;

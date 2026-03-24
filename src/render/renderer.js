@@ -976,6 +976,83 @@
           ctx.lineTo(-r * 0.9, r * 0.16);
           ctx.stroke();
           break;
+        case "neonProwler":
+          ctx.fillStyle = "#2a1538";
+          ctx.beginPath();
+          ctx.moveTo(0, -r);
+          ctx.lineTo(r * 0.76, -r * 0.2);
+          ctx.lineTo(r * 0.38, r * 0.96);
+          ctx.lineTo(-r * 0.38, r * 0.96);
+          ctx.lineTo(-r * 0.76, -r * 0.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#6ef6ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.38, r * 0.24);
+          ctx.lineTo(0, -r * 0.3);
+          ctx.lineTo(r * 0.28, r * 0.12);
+          ctx.stroke();
+          ctx.fillStyle = "#fff4d8";
+          ctx.fillRect(-r * 0.2, -r * 0.1, r * 0.12, r * 0.12);
+          ctx.fillRect(r * 0.08, -r * 0.1, r * 0.12, r * 0.12);
+          break;
+        case "paperMask":
+          ctx.fillStyle = "#f6e8d3";
+          ctx.beginPath();
+          ctx.moveTo(0, -r);
+          ctx.lineTo(r * 0.72, -r * 0.16);
+          ctx.lineTo(r * 0.46, r);
+          ctx.lineTo(-r * 0.46, r);
+          ctx.lineTo(-r * 0.72, -r * 0.16);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#d27f6f";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-r * 0.6, -r * 0.9, r * 1.2, r * 1.8);
+          ctx.fillStyle = "#24141d";
+          ctx.fillRect(-r * 0.2, -r * 0.16, r * 0.12, r * 0.12);
+          ctx.fillRect(r * 0.08, -r * 0.16, r * 0.12, r * 0.12);
+          ctx.fillRect(-r * 0.08, r * 0.2, r * 0.16, r * 0.44);
+          break;
+        case "steamKettle":
+          ctx.fillStyle = "#858da0";
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#d7e1ef";
+          ctx.fillRect(-r * 0.5, -r * 0.16, r, r * 0.92);
+          ctx.strokeStyle = "#f0f4ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(r * 0.6, -r * 0.04, r * 0.2, -Math.PI * 0.3, Math.PI * 0.45);
+          ctx.stroke();
+          ctx.fillStyle = "#ffd1a8";
+          ctx.fillRect(-r * 0.18, -r * 0.2, r * 0.12, r * 0.12);
+          ctx.fillRect(r * 0.06, -r * 0.2, r * 0.12, r * 0.12);
+          break;
+        case "relayBishop":
+          ctx.fillStyle = "#151021";
+          ctx.beginPath();
+          ctx.moveTo(0, -r);
+          ctx.lineTo(r * 0.82, -r * 0.08);
+          ctx.lineTo(r * 0.46, r);
+          ctx.lineTo(-r * 0.46, r);
+          ctx.lineTo(-r * 0.82, -r * 0.08);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#8fe7ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, -r * 0.92);
+          ctx.lineTo(0, r * 0.62);
+          ctx.moveTo(-r * 0.44, -r * 0.14);
+          ctx.lineTo(r * 0.44, -r * 0.14);
+          ctx.stroke();
+          ctx.fillStyle = "#fff1c4";
+          ctx.fillRect(-r * 0.16, -r * 0.32, r * 0.12, r * 0.12);
+          ctx.fillRect(r * 0.04, -r * 0.32, r * 0.12, r * 0.12);
+          break;
         case "stationLord":
         case "arcadeLord":
         case "poolLord":

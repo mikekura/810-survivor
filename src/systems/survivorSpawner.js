@@ -255,12 +255,12 @@
       }
 
       var scale = this.plan.enemyScale || {};
-      var timeScale = 1 + Math.min(0.65, elapsedSec / 1200 * 0.45);
+      var timeScale = 1 + Math.min(0.95, elapsedSec / 1200 * 0.62);
       var hpMultiplier = archetype.category === "elite" || archetype.category === "boss"
         ? (scale.eliteHpMultiplier || 1)
         : (scale.hpMultiplier || 1) * timeScale;
-      var speedMultiplier = scale.speedMultiplier || 1;
-      var damageMultiplier = 1 + Math.min(0.4, elapsedSec / 1200 * 0.28);
+      var speedMultiplier = (scale.speedMultiplier || 1) * (1 + Math.min(0.2, elapsedSec / 1200 * 0.12));
+      var damageMultiplier = 1 + Math.min(0.72, elapsedSec / 1200 * 0.48);
       var size = archetype.category === "boss"
         ? 42
         : archetype.category === "elite"
@@ -285,7 +285,7 @@
         baseSpeed: archetype.speed * speedMultiplier,
         damage: Math.max(1, Math.round(archetype.damage * damageMultiplier)),
         baseDamage: Math.max(1, Math.round(archetype.damage * damageMultiplier)),
-        xp: Math.max(1, Math.round(archetype.xp * (1 + elapsedSec / 1200 * 0.18))),
+        xp: Math.max(1, Math.round(archetype.xp * (1 + elapsedSec / 1200 * 0.14))),
         tags: (archetype.tags || []).slice(),
         levelScale: timeScale,
         spawnTimeSec: elapsedSec
@@ -343,10 +343,10 @@
 
         if (variant) {
           var aliveCount = this.getEnemyCount(runtime);
-          var maxAlive = ((variant.director && variant.director.maxAlive) || 40) + Math.min(72, Math.floor(spawnIntensity * 4));
+          var maxAlive = ((variant.director && variant.director.maxAlive) || 40) + Math.min(88, Math.floor(spawnIntensity * 5));
           var spawnInterval = Math.max(
-            0.12,
-            (((variant.director && variant.director.spawnInterval) || 1) / (1 + spawnIntensity * 0.07))
+            0.1,
+            (((variant.director && variant.director.spawnInterval) || 1) / (1 + spawnIntensity * 0.09))
           );
           state.spawnTimer -= dt;
 
