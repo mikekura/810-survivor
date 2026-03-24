@@ -205,7 +205,11 @@
         petalStorm: { name: "Petal Storm", desc: "Releases a flower-like spiral burst around you." },
         cometTrail: { name: "Comet Trail", desc: "Drops a chain of smaller meteors near the nearest crowd." },
         vitalBloom: { name: "Vital Bloom", desc: "Periodic healing pulse that also hurts nearby enemies." },
-        overclockLoop: { name: "Overclock Loop", desc: "Pushes fire tempo, bullet speed, and special pace higher." }
+        overclockLoop: { name: "Overclock Loop", desc: "Pushes fire tempo, bullet speed, and special pace higher." },
+        emberFork: { name: "Ember Fork", desc: "Fires a wide fork of burning shots toward the nearest target." },
+        prismRail: { name: "Prism Rail", desc: "Twin piercing rails launch in parallel and rip through lines of enemies." },
+        frostMine: { name: "Frost Mine", desc: "Drops drifting frost mines that linger and damage anything that touches them." },
+        spiralDrive: { name: "Spiral Drive", desc: "Unleashes a rotating spiral burst that fills the screen around you." }
       },
       pickups: {
         xp: "XP Crystal",
@@ -424,7 +428,11 @@
         petalStorm: { name: "\u30da\u30bf\u30eb\u30b9\u30c8\u30fc\u30e0", desc: "\u82b1\u3073\u3089\u72b6\u306e\u87ba\u65cb\u5f3e\u5e55\u3092\u5468\u56f2\u306b\u5e83\u3052\u308b\u3002" },
         cometTrail: { name: "\u30b3\u30e1\u30c3\u30c8\u30c8\u30ec\u30a4\u30eb", desc: "\u6700\u3082\u8fd1\u3044\u6575\u7fa4\u306e\u8fd1\u304f\u306b\u5c0f\u96a8\u77f3\u3092\u9023\u7d9a\u3067\u843d\u3068\u3059\u3002" },
         vitalBloom: { name: "\u30d0\u30a4\u30bf\u30eb\u30d6\u30eb\u30fc\u30e0", desc: "\u5b9a\u671f\u7684\u306a\u56de\u5fa9\u30d1\u30eb\u30b9\u304c\u8fd1\u304f\u306e\u6575\u306b\u3082\u30c0\u30e1\u30fc\u30b8\u3092\u4e0e\u3048\u308b\u3002" },
-        overclockLoop: { name: "\u30aa\u30fc\u30d0\u30fc\u30af\u30ed\u30c3\u30af\u30eb\u30fc\u30d7", desc: "\u9023\u5c04\u30c6\u30f3\u30dd\u3001\u5f3e\u901f\u3001\u7279\u6b8a\u653b\u6483\u306e\u56de\u8ee2\u3092\u307e\u3068\u3081\u3066\u5f37\u5316\u3002" }
+        overclockLoop: { name: "\u30aa\u30fc\u30d0\u30fc\u30af\u30ed\u30c3\u30af\u30eb\u30fc\u30d7", desc: "\u9023\u5c04\u30c6\u30f3\u30dd\u3001\u5f3e\u901f\u3001\u7279\u6b8a\u653b\u6483\u306e\u56de\u8ee2\u3092\u307e\u3068\u3081\u3066\u5f37\u5316\u3002" },
+        emberFork: { name: "\u30a8\u30f3\u30d0\u30fc\u30d5\u30a9\u30fc\u30af", desc: "\u6700\u3082\u8fd1\u3044\u6575\u3078\u5411\u3051\u3066\u71b1\u3092\u5e2f\u3073\u305f\u6271\u72b6\u306e\u5f3e\u5e55\u3092\u653e\u3064\u3002" },
+        prismRail: { name: "\u30d7\u30ea\u30ba\u30e0\u30ec\u30fc\u30eb", desc: "\u4e26\u884c\u3059\u308b\u8cab\u901a\u5149\u7dda\u304c\u6575\u306e\u5217\u3092\u305d\u306e\u307e\u307e\u5207\u308a\u88c2\u304f\u3002" },
+        frostMine: { name: "\u30d5\u30ed\u30b9\u30c8\u30de\u30a4\u30f3", desc: "\u3086\u3063\u304f\u308a\u6f02\u3046\u51b7\u6c17\u5730\u96f7\u3092\u3070\u3089\u307e\u304d\u3001\u89e6\u308c\u305f\u6575\u306b\u30c0\u30e1\u30fc\u30b8\u3092\u4e0e\u3048\u308b\u3002" },
+        spiralDrive: { name: "\u30b9\u30d1\u30a4\u30e9\u30eb\u30c9\u30e9\u30a4\u30d6", desc: "\u4f53\u306e\u5468\u308a\u304b\u3089\u753b\u9762\u3092\u57cb\u3081\u308b\u87ba\u65cb\u5f3e\u5e55\u3092\u653e\u3064\u3002" }
       },
       pickups: {
         xp: "XP\u7d50\u6676",
