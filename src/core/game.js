@@ -258,10 +258,23 @@
 
     openSkinCheckout(skinOrId) {
       var url = this.getSkinCheckoutUrl(skinOrId);
+      var ua;
+      var isIOS;
+      var popup;
       if (!url || !/^https:\/\/buy\.stripe\.com\//.test(url)) {
         return false;
       }
-      window.open(url, "_blank", "noopener,noreferrer");
+      ua = window.navigator && window.navigator.userAgent ? window.navigator.userAgent : "";
+      isIOS = /iPad|iPhone|iPod/.test(ua) ||
+        (!!window.navigator && window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        window.location.assign(url);
+        return true;
+      }
+      popup = window.open(url, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        window.location.assign(url);
+      }
       return true;
     }
 

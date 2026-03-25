@@ -185,18 +185,24 @@
 
     confirmPurchase() {
       var target;
+      var opened;
       if (!this.purchaseTarget) {
         return;
       }
       target = this.purchaseTarget;
       this.closePurchaseDialog();
-      Promise.resolve(
-        this.game.startSkinCheckout
-          ? this.game.startSkinCheckout(target)
-          : (this.game.openSkinCheckout && this.game.openSkinCheckout(target))
-      )
-        .then((opened) => {
-          if (opened) {
+      if (this.game.getStripeServerBaseUrl && !this.game.getStripeServerBaseUrl()) {
+        opened = this.game.openSkinCheckout && this.game.openSkinCheckout(target);
+        if (opened) {
+          this.setNotice(this.game.t("store.checkoutOpened"), target.color || "#ff91d7");
+        } else {
+          this.setNotice(this.game.t("store.checkoutMissing"), "#ff8a70");
+        }
+        return;
+      }
+      Promise.resolve(this.game.startSkinCheckout ? this.game.startSkinCheckout(target) : false)
+        .then((result) => {
+          if (result) {
             this.setNotice(this.game.t("store.checkoutOpened"), target.color || "#ff91d7");
           } else {
             this.setNotice(this.game.t("store.checkoutMissing"), "#ff8a70");

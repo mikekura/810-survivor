@@ -53,20 +53,20 @@
     poolLord: Object.assign(ns.survivorSpawnTables.enemyArchetypes.poolLord || {}, { label: "Pool Lord" }),
     festivalLord: Object.assign(ns.survivorSpawnTables.enemyArchetypes.festivalLord || {}, { label: "Festival Lord" }),
     clockLord: Object.assign(ns.survivorSpawnTables.enemyArchetypes.clockLord || {}, { label: "Clock Lord" }),
-    signalCrab: { label: "Signal Crab", category: "rush", hp: 26, speed: 1.28, damage: 10, xp: 2, tags: ["side-step"] },
-    iceCreamBat: { label: "Ice Cream Bat", category: "hunter", hp: 30, speed: 1.2, damage: 11, xp: 2, tags: ["flying"] },
-    speakerTotem: { label: "Speaker Totem", category: "ranged", hp: 60, speed: 0.74, damage: 15, xp: 4, tags: ["speaker"] },
-    shadeRunner: { label: "Shade Runner", category: "rush", hp: 40, speed: 1.42, damage: 13, xp: 3, tags: ["dash"] },
+    signalCrab: { label: "Signal Crab", category: "rush", hp: 32, speed: 1.36, damage: 12, xp: 2, tags: ["side-step"] },
+    iceCreamBat: { label: "Ice Cream Bat", category: "hunter", hp: 38, speed: 1.3, damage: 13, xp: 2, tags: ["flying"] },
+    speakerTotem: { label: "Speaker Totem", category: "ranged", hp: 68, speed: 0.78, damage: 16, xp: 4, tags: ["speaker"] },
+    shadeRunner: { label: "Shade Runner", category: "rush", hp: 48, speed: 1.5, damage: 16, xp: 3, tags: ["dash"] },
     mirrorMoth: { label: "Mirror Moth", category: "disruptor", hp: 56, speed: 1.04, damage: 14, xp: 4, tags: ["zigzag"] },
     sunspotMine: { label: "Sunspot Mine", category: "wall", hp: 88, speed: 0.42, damage: 20, xp: 5, tags: ["heavy"] },
     heatIdol: { label: "Heat Idol", category: "elite", hp: 480, speed: 0.96, damage: 26, xp: 28, tags: ["elite", "burst"] },
-    toastPhantom: { label: "Toast Phantom", category: "disruptor", hp: 58, speed: 1.02, damage: 15, xp: 4, tags: ["wisp"] },
+    toastPhantom: { label: "Toast Phantom", category: "disruptor", hp: 64, speed: 1.08, damage: 16, xp: 4, tags: ["wisp"] },
     forgeSmith: { label: "Forge Smith", category: "ranged", hp: 76, speed: 0.82, damage: 18, xp: 5, tags: ["smith"] },
     brainGolem: { label: "Brain Golem", category: "wall", hp: 132, speed: 0.34, damage: 22, xp: 6, tags: ["heavy"] },
     cometHeron: { label: "Comet Heron", category: "rush", hp: 42, speed: 1.56, damage: 13, xp: 3, tags: ["dash", "flying"] },
     abyssPriest: { label: "Abyss Priest", category: "elite", hp: 540, speed: 0.92, damage: 28, xp: 32, tags: ["elite", "relic"] },
-    neonProwler: { label: "Neon Prowler", category: "rush", hp: 52, speed: 1.68, damage: 15, xp: 3, tags: ["dash", "zigzag"] },
-    paperMask: { label: "Paper Mask", category: "disruptor", hp: 68, speed: 1.08, damage: 16, xp: 4, tags: ["festival", "curse"] },
+    neonProwler: { label: "Neon Prowler", category: "rush", hp: 58, speed: 1.74, damage: 17, xp: 3, tags: ["dash", "zigzag"] },
+    paperMask: { label: "Paper Mask", category: "disruptor", hp: 74, speed: 1.12, damage: 18, xp: 4, tags: ["festival", "curse"] },
     steamKettle: { label: "Steam Kettle", category: "ranged", hp: 92, speed: 0.8, damage: 19, xp: 5, tags: ["steam", "heavy-shot"] },
     relayBishop: { label: "Relay Bishop", category: "elite", hp: 690, speed: 0.96, damage: 32, xp: 36, tags: ["elite", "relay"] }
   });
@@ -88,19 +88,29 @@
   }
 
   pushGroups("stationFront", "opening", [
-    pack("signalCrab", 24, 2, 4, "edge-stream")
+    pack("signalCrab", 28, 3, 5, "edge-stream"),
+    pack("iceCreamBat", 18, 2, 3, "rear-pulse"),
+    pack("neonProwler", 10, 1, 2, "cross-dash")
   ]);
   pushGroups("stationFront", "midPrep", [
     pack("iceCreamBat", 20, 2, 4, "rear-pulse"),
-    pack("neonProwler", 16, 2, 3, "cross-dash", { minRank: 2 })
+    pack("neonProwler", 18, 2, 3, "cross-dash"),
+    pack("toastPhantom", 14, 1, 2, "front-arc")
   ]);
   pushGroups("stationFront", "pressure1", [
     pack("toastPhantom", 20, 1, 2, "front-arc", { minRank: 2 }),
-    pack("neonProwler", 18, 2, 4, "cross-dash", { minRank: 3 })
+    pack("neonProwler", 20, 2, 4, "cross-dash", { minRank: 2 }),
+    pack("shadeRunner", 14, 1, 2, "cross-dash", { minRank: 1 })
+  ]);
+  pushGroups("shoppingStreet", "opening", [
+    pack("signalCrab", 18, 2, 4, "lane-wall"),
+    pack("paperMask", 12, 1, 1, "front-arc"),
+    pack("forgeSmith", 10, 1, 1, "rear-pulse", { minRank: 1 })
   ]);
   pushGroups("shoppingStreet", "pressure1", [
     pack("speakerTotem", 18, 1, 2, "bomb-arc"),
-    pack("paperMask", 18, 1, 2, "front-arc", { minRank: 3 })
+    pack("paperMask", 20, 1, 2, "front-arc", { minRank: 2 }),
+    pack("shadeRunner", 14, 2, 3, "cross-dash", { minRank: 1 })
   ]);
   pushGroups("shoppingStreet", "midPrep", [
     pack("forgeSmith", 18, 1, 2, "rear-pulse", { minRank: 3 }),

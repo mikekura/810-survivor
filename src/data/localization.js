@@ -59,7 +59,6 @@
         surviveGoal: "SURVIVE 20:00",
         favorite: "FAVORITE",
         avoid: "AVOID",
-        mastery: "MASTERY",
         resonance: "RESONANCE",
         rerolls: "REROLLS"
       },
@@ -121,7 +120,6 @@
         scoreUnlocked: "{skin} unlocked!",
         specialScoreUnlocked: "SPECIAL SKIN UNLOCKED: {skin}",
         resonanceUnlocked: "{tag} resonance awakened.",
-        masteryUp: "{skill} mastery {tier}.",
         trueEvolutionReady: "TRUE EVOLUTION READY",
         trueEvolutionAwakened: "{skill} awakened.",
         rerollsLeft: "Rerolls left: {count}",
@@ -307,7 +305,6 @@
         surviveGoal: "20:00 \u751f\u5b58",
         favorite: "\u5f97\u610f",
         avoid: "\u82e6\u624b",
-        mastery: "\u719f\u7df4",
         resonance: "\u5171\u9cf4",
         rerolls: "\u30ea\u30ed\u30fc\u30eb"
       },
@@ -369,7 +366,6 @@
         scoreUnlocked: "{skin} \u89e3\u653e!",
         specialScoreUnlocked: "\u7279\u5225\u30b9\u30ad\u30f3\u89e3\u653e: {skin}",
         resonanceUnlocked: "{tag}\u5171\u9cf4\u304c\u76ee\u899a\u3081\u305f\u3002",
-        masteryUp: "{skill} \u719f\u7df4 {tier}\u3002",
         trueEvolutionReady: "\u771f\u9032\u5316\u89e3\u653e",
         trueEvolutionAwakened: "{skill} \u767a\u73fe\u3002",
         rerollsLeft: "\u6b8b\u308a\u30ea\u30ed\u30fc\u30eb: {count}",

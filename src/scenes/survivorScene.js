@@ -9,7 +9,6 @@
   var LEVELUP_CARD_WIDTH = 430;
   var LEVELUP_CARD_HEIGHT = 116;
   var TAG_RESONANCE_THRESHOLD = 3;
-  var MASTERY_THRESHOLDS = [10, 30, 70];
   var TRUE_EVOLUTION_IDS = ["solarRequiem", "glacierSanctuary", "phantomMirage"];
   var TAG_COLORS = {
     fire: "#ff9f76",
@@ -704,8 +703,6 @@
       this.acquiredUpgrades = [];
       this.tagCounts = {};
       this.tagResonance = {};
-      this.skillMastery = {};
-      this.skillMasteryTimers = {};
       this.skillCueTimers = {};
       this.levelUpRerolls = this.isBotMode ? 0 : 3;
       this.camera = { x: 0, y: 0 };
@@ -1134,19 +1131,15 @@
       var visual = this.getSkillVisual(skillId);
       var bonus = this.getSkillBonusState(skillId);
       var opts = options || {};
-      var power = (opts.power || 1) + bonus.tier * 0.12 + (bonus.countBonus > 0 ? 0.08 : 0);
+      var power = (opts.power || 1) + (bonus.countBonus > 0 ? 0.08 : 0);
       var angle = typeof opts.angle === "number" ? opts.angle : this.player.facingAngle;
       var ringRadius = (opts.radius || (16 + power * 8)) * bonus.areaMul;
 
       this.spawnWeaponMotifFx(x, y, visual, power);
 
-      if (!this.skillMasteryTimers[skillId] || this.skillMasteryTimers[skillId] <= 0) {
-        this.recordSkillUse(skillId, opts.masteryAmount || 1);
-        this.skillMasteryTimers[skillId] = 0.65;
-      }
       if (this.game.audio && this.game.audio.playSkillCue && (!this.skillCueTimers[skillId] || this.skillCueTimers[skillId] <= 0)) {
         this.game.audio.playSkillCue(skillId, {
-          tier: bonus.tier,
+          tier: bonus.countBonus > 0 ? 1 : 0,
           resonance: bonus.tags.some((tag) => this.tagResonance[tag])
         });
         this.skillCueTimers[skillId] = 0.2;
@@ -1535,13 +1528,13 @@
     }
 
     getSpawnIntensity() {
-      var base = Math.floor(this.score / 9000);
+      var base = Math.floor(this.score / 8000);
       if (this.isBotMode) {
-        base += Math.floor(this.elapsedSec / 40);
+        base += Math.floor(this.elapsedSec / 34);
       } else if (this.isInfinityMode) {
-        base += Math.floor(this.elapsedSec / 60);
+        base += Math.floor(this.elapsedSec / 50);
       } else {
-        base += Math.floor(this.elapsedSec / 150);
+        base += Math.floor(this.elapsedSec / 120);
       }
       return base;
     }
@@ -1552,33 +1545,33 @@
 
     getEnemyTimeTier() {
       if (this.isBotMode) {
-        return Math.floor(this.elapsedSec / 32);
+        return Math.floor(this.elapsedSec / 28);
       }
       if (this.isInfinityMode) {
-        return Math.floor(this.elapsedSec / 55);
+        return Math.floor(this.elapsedSec / 46);
       }
-      return Math.floor(this.elapsedSec / 82);
+      return Math.floor(this.elapsedSec / 70);
     }
 
     getEnemyTimeRates() {
       if (this.isBotMode) {
         return {
-          hp: 1.105,
-          speed: 1.02,
-          damage: 1.07
+          hp: 1.12,
+          speed: 1.023,
+          damage: 1.075
         };
       }
       if (this.isInfinityMode) {
         return {
-          hp: 1.095,
-          speed: 1.018,
-          damage: 1.062
+          hp: 1.105,
+          speed: 1.02,
+          damage: 1.065
         };
       }
       return {
-        hp: 1.07,
-        speed: 1.013,
-        damage: 1.045
+        hp: 1.08,
+        speed: 1.015,
+        damage: 1.05
       };
     }
 
@@ -1586,18 +1579,18 @@
       var scoreTier = this.getSpawnIntensity();
       var timeTier = this.getEnemyTimeTier();
       var timeRates = this.getEnemyTimeRates();
-      var hpScale = 1 + Math.min(4.4, scoreTier * 0.085);
-      var speedScale = 1 + Math.min(1.05, scoreTier * 0.024);
-      var damageScale = 1 + Math.min(3.2, scoreTier * 0.062);
+      var hpScale = 1 + Math.min(4.8, scoreTier * 0.095);
+      var speedScale = 1 + Math.min(1.15, scoreTier * 0.028);
+      var damageScale = 1 + Math.min(3.6, scoreTier * 0.07);
 
       if (this.isBotMode) {
-        hpScale *= 1.12;
-        speedScale *= 1.08;
-        damageScale *= 1.12;
+        hpScale *= 1.14;
+        speedScale *= 1.1;
+        damageScale *= 1.14;
       } else if (this.isInfinityMode) {
-        hpScale *= 1.06;
-        speedScale *= 1.04;
-        damageScale *= 1.07;
+        hpScale *= 1.08;
+        speedScale *= 1.05;
+        damageScale *= 1.08;
       }
 
       return {
@@ -1925,28 +1918,8 @@
       return tags.join(" / ");
     }
 
-    getSkillMasteryValue(upgradeId) {
-      return this.skillMastery[upgradeId] || 0;
-    }
-
-    getSkillMasteryTier(upgradeId) {
-      var value = this.getSkillMasteryValue(upgradeId);
-      if (value >= MASTERY_THRESHOLDS[2]) {
-        return 3;
-      }
-      if (value >= MASTERY_THRESHOLDS[1]) {
-        return 2;
-      }
-      if (value >= MASTERY_THRESHOLDS[0]) {
-        return 1;
-      }
-      return 0;
-    }
-
     getUpgradeMetaLine(upgradeId) {
-      var tagLine = this.getUpgradeTagLine(upgradeId);
-      var mastery = translate(this.game, "common.mastery") + " " + this.getSkillMasteryTier(upgradeId);
-      return tagLine ? tagLine + "  |  " + mastery : mastery;
+      return this.getUpgradeTagLine(upgradeId);
     }
 
     getActiveResonanceSnapshot() {
@@ -1992,17 +1965,16 @@
 
     getSkillBonusState(upgradeId) {
       var tags = this.getUpgradeTags(upgradeId);
-      var tier = this.getSkillMasteryTier(upgradeId);
       var bonus = {
-        tier: tier,
         tags: tags,
-        damageMul: 1 + tier * 0.08,
-        areaMul: 1 + tier * 0.05,
-        countBonus: tier >= 3 ? 1 : 0,
-        cooldownMul: Math.max(0.7, 1 - tier * 0.05),
-        healBonus: tier,
-        turnBonus: tier * 0.6,
-        pierceBonus: tier >= 2 ? 1 : 0
+        tier: 0,
+        damageMul: 1,
+        areaMul: 1,
+        countBonus: 0,
+        cooldownMul: 1,
+        healBonus: 0,
+        turnBonus: 0,
+        pierceBonus: 0
       };
 
       if (tags.indexOf("fire") >= 0 && this.tagResonance.fire) {
@@ -2039,39 +2011,13 @@
         bonus.cooldownMul -= 0.04;
         bonus.healBonus += 3;
       }
-
       bonus.countBonus = Math.min(2, bonus.countBonus);
       bonus.cooldownMul = Math.max(0.58, bonus.cooldownMul);
       return bonus;
     }
 
-    recordSkillUse(upgradeId, amount) {
-      var currentTier;
-      var nextTier;
-      var gain = Math.max(1, amount || 1);
-      if (!UPGRADE_CATALOG[upgradeId]) {
-        return;
-      }
-      currentTier = this.getSkillMasteryTier(upgradeId);
-      this.skillMastery[upgradeId] = this.getSkillMasteryValue(upgradeId) + gain;
-      nextTier = this.getSkillMasteryTier(upgradeId);
-      if (nextTier > currentTier) {
-        this.pushMessage(
-          translate(this.game, "survivor.masteryUp", {
-            skill: getUpgradeName(this.game, upgradeId),
-            tier: nextTier
-          }),
-          1.3,
-          "#d6d0ff"
-        );
-      }
-    }
-
     updateSkillStateTimers(dt) {
       var self = this;
-      Object.keys(this.skillMasteryTimers).forEach(function (key) {
-        self.skillMasteryTimers[key] = Math.max(0, self.skillMasteryTimers[key] - dt);
-      });
       Object.keys(this.skillCueTimers).forEach(function (key) {
         self.skillCueTimers[key] = Math.max(0, self.skillCueTimers[key] - dt);
       });
@@ -3512,7 +3458,10 @@
         if (tolerance > arcWidth * 0.5 + enemy.radius / Math.max(40, reach)) {
           continue;
         }
-        enemy.hp -= damage;
+        this.applyDamageToEnemy(enemy, damage, {
+          color: opts.color || "#ffe07a",
+          critical: enemy.category === "boss" || enemy.category === "elite"
+        });
         if (opts.impulse) {
           enemy.x += Math.cos(angle) * opts.impulse;
           enemy.y += Math.sin(angle) * opts.impulse;
@@ -3662,7 +3611,9 @@
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         var enemy = this.enemies[i];
         if (pointDistance(enemy.x, enemy.y, tipX, tipY) <= impactRadius + enemy.radius) {
-          enemy.hp -= Math.round(damage * 0.38);
+          this.applyDamageToEnemy(enemy, Math.round(damage * 0.38), {
+            color: visual.trailColor
+          });
           this.effects.spawnHit(enemy.x, enemy.y, {
             color: visual.trailColor,
             ringColor: visual.accentColor,
@@ -3882,7 +3833,9 @@
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         var enemy = this.enemies[i];
         if (pointDistance(enemy.x, enemy.y, impactX, impactY) <= radius + enemy.radius) {
-          enemy.hp -= damage;
+          this.applyDamageToEnemy(enemy, damage, {
+            color: visual.color
+          });
           this.effects.spawnHit(enemy.x, enemy.y, {
             color: visual.color,
             ringColor: visual.accentColor,
@@ -3937,7 +3890,9 @@
           color: visual.color,
           flashColor: visual.accentColor
         });
-        currentTarget.hp -= Math.round(damage * Math.max(0.68, 1 - i * 0.12));
+        this.applyDamageToEnemy(currentTarget, Math.round(damage * Math.max(0.68, 1 - i * 0.12)), {
+          color: visual.color
+        });
         this.effects.spawnHit(currentTarget.x, currentTarget.y, {
           color: visual.color,
           ringColor: visual.accentColor,
@@ -4220,7 +4175,9 @@
         for (j = this.enemies.length - 1; j >= 0; j -= 1) {
           var enemy = this.enemies[j];
           if (pointDistance(enemy.x, enemy.y, impactX, impactY) <= radius + enemy.radius) {
-            enemy.hp -= damage;
+            this.applyDamageToEnemy(enemy, damage, {
+              color: visual.color
+            });
             this.effects.spawnHit(enemy.x, enemy.y, {
               color: visual.color,
               ringColor: visual.accentColor,
@@ -4484,7 +4441,9 @@
       });
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= radius + this.enemies[i].radius) {
-          this.enemies[i].hp -= damage;
+          this.applyDamageToEnemy(this.enemies[i], damage, {
+            color: visual.color
+          });
           this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
             color: visual.color,
             ringColor: visual.accentColor,
@@ -4594,7 +4553,9 @@
         for (j = 0; j < this.haloRender.length; j += 1) {
           var sigil = this.haloRender[j];
           if (pointDistance(sigil.x, sigil.y, enemy.x, enemy.y) <= sigil.radius + enemy.radius + 6) {
-            enemy.hp -= damage;
+            this.applyDamageToEnemy(enemy, damage, {
+              color: visual.color
+            });
             enemy.haloDamageTimer = 0.18;
             this.effects.spawnHit(enemy.x, enemy.y, {
               color: visual.color,
@@ -4707,7 +4668,9 @@
           });
           for (i = this.enemies.length - 1; i >= 0; i -= 1) {
             if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= 146 + this.enemies[i].radius) {
-              this.enemies[i].hp -= damage;
+              this.applyDamageToEnemy(this.enemies[i], damage, {
+                color: "#ff91d7"
+              });
               this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
                 color: "#ff91d7",
                 ringColor: "#ffe0f2",
@@ -4744,7 +4707,9 @@
           });
           for (i = this.enemies.length - 1; i >= 0; i -= 1) {
             if (pointDistance(this.enemies[i].x, this.enemies[i].y, this.player.x, this.player.y) <= vitalRadius + this.enemies[i].radius) {
-              this.enemies[i].hp -= vitalDamage;
+              this.applyDamageToEnemy(this.enemies[i], vitalDamage, {
+                color: vitalVisual.color
+              });
               this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
                 color: vitalVisual.color,
                 ringColor: vitalVisual.accentColor,
@@ -4803,7 +4768,9 @@
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
         var enemy = this.enemies[i];
         if (pointDistance(enemy.x, enemy.y, this.player.x, this.player.y) <= radius + enemy.radius) {
-          enemy.hp -= damage;
+          this.applyDamageToEnemy(enemy, damage, {
+            color: visual.color
+          });
           this.effects.spawnHit(enemy.x, enemy.y, {
             color: visual.color,
             ringColor: visual.accentColor,
@@ -4987,7 +4954,10 @@
         var enemy = this.enemies[i];
         var dist = pointToSegmentDistance(enemy.x, enemy.y, this.player.x, this.player.y, endX, endY);
         if (dist <= enemy.radius + width) {
-          enemy.hp -= damage;
+          this.applyDamageToEnemy(enemy, damage, {
+            color: "#ffe07a",
+            critical: true
+          });
           this.effects.spawnHit(enemy.x, enemy.y, {
             color: "#ffe07a",
             ringColor: "#fff1c4",
@@ -5160,7 +5130,9 @@
       }
 
       for (i = this.enemies.length - 1; i >= 0; i -= 1) {
-        this.enemies[i].hp -= damage;
+        this.applyDamageToEnemy(this.enemies[i], damage, {
+          color: "#ff91d7"
+        });
         this.effects.spawnHit(this.enemies[i].x, this.enemies[i].y, {
           color: "#ff91d7",
           ringColor: "#ffe0f2",
@@ -5874,7 +5846,9 @@
         for (j = 0; j < this.orbitRender.length; j += 1) {
           var orb = this.orbitRender[j];
           if (pointDistance(orb.x, orb.y, enemy.x, enemy.y) <= orb.radius + enemy.radius) {
-            enemy.hp -= damage;
+            this.applyDamageToEnemy(enemy, damage, {
+              color: opts.color || "#ffe07a"
+            });
             enemy.orbitDamageTimer = 0.14 * bonus.cooldownMul;
             this.effects.spawnHit(enemy.x, enemy.y, {
               color: orbitVisual.color,
@@ -5894,6 +5868,23 @@
           }
         }
       }
+    }
+
+    applyDamageToEnemy(enemy, amount, options) {
+      var opts = options || {};
+      var damage = Math.max(1, Math.round(amount || 0));
+      var radius = enemy && typeof enemy.radius === "number" ? enemy.radius : 14;
+      if (!enemy) {
+        return 0;
+      }
+      enemy.hp -= damage;
+      enemy.hpBarTimer = Math.max(enemy.hpBarTimer || 0, 1.1);
+      this.effects.spawnFloatingText("-" + damage, enemy.x + (Math.random() * 10 - 5), enemy.y - radius - 18 + (Math.random() * 6 - 3), {
+        color: opts.color || (opts.critical ? "#fff1c4" : "#ffd7a1"),
+        size: opts.size || (enemy.category === "boss" ? 20 : enemy.category === "elite" ? 18 : 15),
+        life: opts.life || 0.46
+      });
+      return damage;
     }
 
     damagePlayer(amount) {
@@ -6050,7 +6041,10 @@
         for (j = this.enemies.length - 1; j >= 0; j -= 1) {
           var enemy = this.enemies[j];
           if (distanceSquared(shot, enemy) <= (shot.radius + enemy.radius) * (shot.radius + enemy.radius)) {
-            enemy.hp -= shot.damage;
+            this.applyDamageToEnemy(enemy, shot.damage, {
+              color: shot.color,
+              critical: shot.kind === "pulse" || shot.kind === "beam"
+            });
             this.effects.spawnHit(enemy.x, enemy.y, {
               color: shot.color,
               ringColor: "#e4fbff",
@@ -7439,14 +7433,18 @@
           pulse: this.elapsedSec * 5
         });
 
-        if (enemy.category === "boss" || enemy.category === "elite") {
-          var hpWidth = enemy.radius * 2.2;
-          var hpRatio = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0;
-          ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-          ctx.fillRect(enemyScreen.x - enemy.radius, enemyScreen.y - enemy.radius - 13, hpWidth, 5);
-          ctx.fillStyle = enemy.category === "boss" ? "#fff1c4" : "#ffddb0";
-          ctx.fillRect(enemyScreen.x - enemy.radius, enemyScreen.y - enemy.radius - 13, hpWidth * hpRatio, 5);
-        }
+        var hpWidth = enemy.category === "boss" ? enemy.radius * 2.6 : enemy.category === "elite" ? enemy.radius * 2.2 : Math.max(26, enemy.radius * 2);
+        var hpHeight = enemy.category === "boss" ? 5 : 4;
+        var hpRatio = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0;
+        var hpX = enemyScreen.x - hpWidth * 0.5;
+        var hpY = enemyScreen.y - enemy.radius - 12;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.64)";
+        ctx.fillRect(hpX, hpY, hpWidth, hpHeight);
+        ctx.fillStyle = hpRatio > 0.55 ? "#88f291" : hpRatio > 0.25 ? "#f6c453" : "#ff8a70";
+        ctx.fillRect(hpX, hpY, hpWidth * hpRatio, hpHeight);
+        ctx.strokeStyle = enemy.category === "boss" ? "#fff1c4" : enemy.category === "elite" ? "#ffddb0" : "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(hpX - 0.5, hpY - 0.5, hpWidth + 1, hpHeight + 1);
       }
 
       this.drawWeaponFx(ctx, shake);
@@ -7925,8 +7923,11 @@
     drawDesktopHud(renderer) {
       var panelX = 16;
       var panelY = 16;
+      var showXp = this.shouldShowXpProgress();
+      var xpRatio = showXp && this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
+      var ctx = renderer.ctx;
 
-      renderer.drawPanel(panelX, panelY, 212, 104, {
+      renderer.drawPanel(panelX, panelY, 212, 132, {
         fill: "rgba(10, 10, 10, 0.9)",
         border: this.stageTheme.accent
       });
@@ -7938,10 +7939,27 @@
         size: 22,
         color: "#ffe07a"
       });
+      if (showXp) {
+        renderer.drawText("LV " + this.player.level, panelX + 18, panelY + 94, {
+          size: 14,
+          color: "#9ee4ff"
+        });
+        ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.fillRect(panelX + 18, panelY + 112, 176, 8);
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(panelX + 17.5, panelY + 111.5, 177, 9);
+        ctx.fillStyle = "#88f291";
+        ctx.fillRect(panelX + 19, panelY + 113, 174 * Math.max(0, Math.min(1, xpRatio)), 6);
+      }
     }
 
     drawMobileHud(renderer) {
-      renderer.drawPanel(16, 16, 320, 96, {
+      var showXp = this.shouldShowXpProgress();
+      var xpRatio = showXp && this.player.xpForNext > 0 ? this.player.xp / this.player.xpForNext : 0;
+      var ctx = renderer.ctx;
+
+      renderer.drawPanel(16, 16, 320, 124, {
         fill: "rgba(10, 10, 10, 0.88)",
         border: this.stageTheme.accent
       });
@@ -7953,6 +7971,19 @@
         size: 22,
         color: "#ffe07a"
       });
+      if (showXp) {
+        renderer.drawText("LV " + this.player.level, 34, 90, {
+          size: 14,
+          color: "#9ee4ff"
+        });
+        ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.fillRect(34, 108, 254, 8);
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(33.5, 107.5, 255, 9);
+        ctx.fillStyle = "#88f291";
+        ctx.fillRect(35, 109, 252 * Math.max(0, Math.min(1, xpRatio)), 6);
+      }
     }
 
     drawPauseMenuDetails(renderer, panelX, panelY, panelWidth, mobile) {

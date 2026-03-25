@@ -255,12 +255,12 @@
       }
 
       var scale = this.plan.enemyScale || {};
-      var timeScale = 1 + Math.min(0.95, elapsedSec / 1200 * 0.62);
+      var timeScale = 1.06 + Math.min(0.98, elapsedSec / 1200 * 0.66);
       var hpMultiplier = archetype.category === "elite" || archetype.category === "boss"
         ? (scale.eliteHpMultiplier || 1)
         : (scale.hpMultiplier || 1) * timeScale;
-      var speedMultiplier = (scale.speedMultiplier || 1) * (1 + Math.min(0.2, elapsedSec / 1200 * 0.12));
-      var damageMultiplier = 1 + Math.min(0.72, elapsedSec / 1200 * 0.48);
+      var speedMultiplier = (scale.speedMultiplier || 1) * (1.04 + Math.min(0.22, elapsedSec / 1200 * 0.14));
+      var damageMultiplier = 1.08 + Math.min(0.78, elapsedSec / 1200 * 0.5);
       var size = archetype.category === "boss"
         ? 42
         : archetype.category === "elite"
@@ -268,6 +268,46 @@
           : archetype.category === "wall"
             ? 18
             : 14;
+
+      var hpValue = Math.round(archetype.hp * hpMultiplier);
+      var hpFloor = 0;
+      var tags = archetype.tags || [];
+
+      if (archetype.category === "boss") {
+        hpFloor = 900 + Math.floor(elapsedSec * 0.16);
+      } else if (archetype.category === "elite") {
+        hpFloor = 260 + Math.floor(elapsedSec * 0.1);
+      } else if (archetype.category === "wall") {
+        hpFloor = 118 + Math.floor(elapsedSec * 0.07);
+      } else if (archetype.category === "ranged") {
+        hpFloor = 74 + Math.floor(elapsedSec * 0.05);
+      } else if (archetype.category === "disruptor") {
+        hpFloor = 66 + Math.floor(elapsedSec * 0.048);
+      } else if (archetype.category === "hunter") {
+        hpFloor = 58 + Math.floor(elapsedSec * 0.045);
+      } else if (archetype.category === "rush") {
+        hpFloor = 54 + Math.floor(elapsedSec * 0.042);
+      } else {
+        hpFloor = 60 + Math.floor(elapsedSec * 0.045);
+      }
+
+      if (tags.indexOf("heavy") >= 0) {
+        hpFloor += 18;
+      }
+      if (tags.indexOf("elite") >= 0) {
+        hpFloor += 28;
+      }
+      if (tags.indexOf("flying") >= 0) {
+        hpFloor += 6;
+      }
+      if (tags.indexOf("dash") >= 0) {
+        hpFloor += 10;
+      }
+      if (tags.indexOf("curse") >= 0 || tags.indexOf("relay") >= 0 || tags.indexOf("burst") >= 0) {
+        hpFloor += 14;
+      }
+
+      hpValue = Math.max(hpValue, hpFloor);
 
       return Object.assign({
         id: "survivor-enemy-" + (this.serial += 1),
@@ -279,8 +319,8 @@
         vx: 0,
         vy: 0,
         radius: size,
-        hp: Math.round(archetype.hp * hpMultiplier),
-        maxHp: Math.round(archetype.hp * hpMultiplier),
+        hp: hpValue,
+        maxHp: hpValue,
         speed: archetype.speed * speedMultiplier,
         baseSpeed: archetype.speed * speedMultiplier,
         damage: Math.max(1, Math.round(archetype.damage * damageMultiplier)),
